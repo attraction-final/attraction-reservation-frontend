@@ -64,7 +64,8 @@ export default function RouteSetup() {
       // 결과 화면으로 이동하면서 추천 결과를 같이 넘겨요.
       navigate('/route/result', { state: { result } });
     } catch (e) {
-      // 위치 정확도가 낮음·공원에서 너무 멂·이동 경로 없음 등은 서버 메시지를 그대로 보여 줘요.
+      // 위치 정확도가 낮음·공원에서 너무 멂·고른 어트랙션 사이 이동 정보 없음·그사이 운영 중단 등은
+      // 서버 메시지를 그대로 보여 줘요. (목록은 위치만 보장하고, 어트랙션 사이 이동 정보는 고른 조합마다 달라요)
       setError(e.message);
     } finally {
       setSubmitting(false);
@@ -91,7 +92,7 @@ export default function RouteSetup() {
             <span className="small bold" style={{ color: 'var(--blue-ink)' }}>{picked.length}/{ROUTE_PICK_COUNT}개 선택됨</span>
           </div>
           <span className="small muted">
-            {ROUTE_PICK_COUNT}개를 고르면 걷는 시간이 가장 짧은 순서를 알려 드려요. 이동 정보가 준비된 어트랙션만 보여요.
+            {ROUTE_PICK_COUNT}개를 고르면 걷는 시간이 가장 짧은 순서를 알려 드려요. 지금 운영 중이고 위치가 등록된 어트랙션만 보여요.
           </span>
           {rides.error && <span className="error-text" role="alert">{rides.error.message}</span>}
           {!rides.error && (rides.data || []).length < ROUTE_PICK_COUNT && (

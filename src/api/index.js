@@ -516,8 +516,9 @@ export const ROUTE_PICK_COUNT = 5;
 
 export const routeApi = {
   // [GET /api/route-recommendations/attractions] → [{ attractionId, attractionName }]
-  // 추천에 고를 수 있는 어트랙션(좌표가 등록된 곳)과 사진·운영 상태가 있는 어트랙션 목록을 합쳐서 줘요.
-  // 좌표가 없는 어트랙션을 고르면 추천이 실패해서, 처음부터 선택지에서 빼요.
+  // 추천에 고를 수 있는 어트랙션(운영 중이고 좌표가 등록된 곳)과 사진이 있는 어트랙션 목록을 합쳐서 줘요.
+  // 운영하지 않거나 좌표가 없는 어트랙션을 고르면 추천이 실패해서, 처음부터 선택지에서 빼요.
+  // 어트랙션 사이 이동 정보는 여기서 보장하지 않아요. 없으면 추천 요청이 409로 실패해요.
   recommendableAttractions: async () => {
     const [recommendable, all] = await Promise.all([
       http.get('/route-recommendations/attractions'),
