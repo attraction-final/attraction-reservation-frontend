@@ -141,6 +141,17 @@ export const http = {
   delete: (path) => request('DELETE', path),
 };
 
+// ───────── 주소 조각 안전하게 만들기 ─────────
+// API 경로에 id 같은 값을 넣을 때는 꼭 seg() 로 감싸요.
+//   http.get(`/attractions/${seg(id)}`)
+//  - encodeURIComponent: '/', '?', '#' 같은 특수문자를 %2F 처럼 바꿔서, 값이 경로를 쪼개거나 바꾸지 못하게 해요.
+//  - '.', '..', 빈 값은 encodeURIComponent 로도 안 바뀌어서(점은 그대로 남아요) 따로 막아요.
+export function seg(value) {
+  const s = String(value ?? '');
+  if (s === '' || s === '.' || s === '..') throw new ApiError('잘못된 요청 주소예요.', 400);
+  return encodeURIComponent(s);
+}
+
 // { date: '2026-10-24', q: '' } → "?date=2026-10-24" (빈 값은 빼고 만들어 줘요)
 export function toQuery(params = {}) {
   const sp = new URLSearchParams();

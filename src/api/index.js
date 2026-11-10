@@ -1,4 +1,4 @@
-import { http, toQuery } from './http.js';
+import { http, seg, toQuery } from './http.js';
 
 /*
  * 화면에서 부르는 API 함수 목록입니다.
@@ -177,11 +177,11 @@ export const attractionApi = {
     };
   },
   // [GET /api/attractions/{id}]
-  detail: async (id) => toAttractionDetail(await http.get(`/attractions/${id}`)),
+  detail: async (id) => toAttractionDetail(await http.get(`/attractions/${seg(id)}`)),
   // [GET /api/attractions/{id}/slots?date=] (로그인해야 볼 수 있어요)
   slots: async (id, date) => {
     const [res, myReserved] = await Promise.all([
-      http.get(`/attractions/${id}/slots${toQuery({ date })}`),
+      http.get(`/attractions/${seg(id)}/slots${toQuery({ date })}`),
       // 내 "예약 완료" 목록도 같이 받아서 '내 예약' / '다른 예약과 겹침' 표시를 만들어요.
       // (실패해도 슬롯은 보여야 하니까 빈 목록으로 대신해요)
       http.get(`/reservations/me${toQuery({ status: 'RESERVED', size: 50 })}`)
@@ -296,7 +296,7 @@ export const ticketApi = {
   // 입장권 한 장만 골라서 환불해요. 응답: { refundId, refundAmount, status }
   // status 가 COMPLETED 가 아니면(REQUESTED·PROCESSING 등) 서버가 PG 취소를 이어서 처리하는 중이에요.
   refund: (ticket, reason) =>
-      http.post(`/payments/${ticket.pgId}/refunds/partial`, { ticketIds: [ticket.id], reason }),
+      http.post(`/payments/${seg(ticket.pgId)}/refunds/partial`, { ticketIds: [ticket.id], reason }),
 };
 
 // ───────── 예약 ✅ ─────────
@@ -364,12 +364,12 @@ export const reservationApi = {
   },
 
   // [PATCH /api/reservations/{id}/cancel]
-  cancel: (id) => http.patch(`/reservations/${id}/cancel`),
+  cancel: (id) => http.patch(`/reservations/${seg(id)}/cancel`),
   // [GET /api/reservations/{id}] 내 예약 한 건 상세 (SearchReservationDetailResponse)
   // 남의 예약 번호를 넣으면 서버가 막아요. (userId 로 본인 것만 조회)
   // 위치·탑승 시간은 응답에 없어서, 같이 온 attractionId 로 어트랙션 상세를 한 번 더 불러와요.
   detail: async (id) => {
-    const r = await http.get(`/reservations/${id}`);
+    const r = await http.get(`/reservations/${seg(id)}`);
     // 어트랙션이 삭제됐어도 예약 상세는 보여야 하니까, 실패하면 null 로 두고 넘어가요.
     const a = await attractionApi.detail(r.attractionId).catch(() => null);
     return {
@@ -432,12 +432,12 @@ export const orderApi = {
 
   // [GET /api/orders/{id}]
   detail: async (id) => {
-    const [o, byId] = await Promise.all([http.get(`/orders/${id}`), productsById()]);
+    const [o, byId] = await Promise.all([http.get(`/orders/${seg(id)}`), productsById()]);
     return toOrder(o, byId);
   },
 
   // [POST /api/orders/{id}/cancel] 결제 대기(PENDING) 주문만 취소돼요. 응답: { orderId, status: 'CANCELLED' }
-  cancel: (id) => http.post(`/orders/${id}/cancel`),
+  cancel: (id) => http.post(`/orders/${seg(id)}/cancel`),
 
   // [GET /api/orders/me?page=0&size=20] 내 결제 내역
   // 목록 응답의 items 에 상품 이름·수량이 같이 와요.
@@ -464,7 +464,7 @@ export const paymentApi = {
 
   // [POST /api/payments/{pgId}/confirm] { orderId }
   // 포트원 결제창이 끝난 뒤, 서버가 포트원에 "진짜 돈이 들어왔는지" 다시 물어보고 주문을 확정해요.
-  confirm: (pgId, orderId) => http.post(`/payments/${pgId}/confirm`, { orderId: Number(orderId) }),
+  confirm: (pgId, orderId) => http.post(`/payments/${seg(pgId)}/confirm`, { orderId: Number(orderId) }),
 };
 
 // ───────── 루트 추천 ✅ ─────────
@@ -581,7 +581,7 @@ const adminSlotApi = {
 
   // [GET /api/admin/attractions/{id}/slots?date=] (삭제된 슬롯은 빼고 와요)
   slots: async (attractionId, date) => {
-    const res = await http.get(`/admin/attractions/${attractionId}/slots${toQuery({ date })}`);
+    const res = await http.get(`/admin/attractions/${seg(attractionId)}/slots${toQuery({ date })}`);
     return res.slots
         .map(toAdminSlot)
         .sort((a, b) => a.startTime.localeCompare(b.startTime));
@@ -591,7 +591,7 @@ const adminSlotApi = {
   // 화면은 날짜와 시간을 따로 주니까 백엔드 형식으로 합쳐요. 종료 시각은 서버가 탑승 시간으로 계산해요.
   createSlot: (attractionId, { date, startTime, capacity }) => {
     if (!startTime) return Promise.reject(new Error('시작 시간을 입력해 주세요.'));
-    return http.post(`/admin/attractions/${attractionId}/slots`, {
+    return http.post(`/admin/attractions/${seg(attractionId)}/slots`, {
       startsAt: `${date}T${startTime}:00`,
       capacity,
     });
@@ -614,20 +614,20 @@ const adminSlotApi = {
   },
 
   // [PATCH /api/admin/slots/{id}/status] { status }
-  updateSlot: (slotId, status) => http.patch(`/admin/slots/${slotId}/status`, { status }),
+  updateSlot: (slotId, status) => http.patch(`/admin/slots/${seg(slotId)}/status`, { status }),
 
   // [PATCH /api/admin/slots/{id}/time] { startsAt: "2026-11-04T10:15:00" }
   // 백엔드 규칙: 예약이 있으면 못 바꾸고, 다른 슬롯과 겹치거나 운영 시간을 벗어나면 거절돼요.
   updateSlotTime: (slotId, date, startTime) =>
-      http.patch(`/admin/slots/${slotId}/time`, { startsAt: `${date}T${startTime}:00` }),
+      http.patch(`/admin/slots/${seg(slotId)}/time`, { startsAt: `${date}T${startTime}:00` }),
 
   // [PATCH /api/admin/slots/{id}/capacity] { capacity }
   // 백엔드 규칙: 1명 이상, 이미 예약한 인원보다 적게 줄일 수 없어요.
   updateSlotCapacity: (slotId, capacity) =>
-      http.patch(`/admin/slots/${slotId}/capacity`, { capacity: Number(capacity) }),
+      http.patch(`/admin/slots/${seg(slotId)}/capacity`, { capacity: Number(capacity) }),
 
   // [DELETE /api/admin/slots/{id}] (진짜로 지우지 않고 CANCELLED 상태로 바꿔요)
-  deleteSlot: (slotId) => http.delete(`/admin/slots/${slotId}`),
+  deleteSlot: (slotId) => http.delete(`/admin/slots/${seg(slotId)}`),
 };
 
 // ───────── 관리자 – 예약·회원 관리 ✅ ─────────
@@ -719,7 +719,7 @@ const adminManageApi = {
   // [GET /api/admin/reservations/{id}] 예약 한 건 상세 (카드를 펼칠 때, 상태를 바꾼 뒤에 불러와요)
   // 목록 응답에 없는 입장권 번호·취소 사유·취소 시각이 더 들어 있어요.
   reservationDetail: async (id, lookup) => {
-    const r = await http.get(`/admin/reservations/${id}`);
+    const r = await http.get(`/admin/reservations/${seg(id)}`);
     return {
       ...toAdminReservation(r, lookup.userById, lookup.attractionById),
       ticketId: r.ticketId,
@@ -731,11 +731,11 @@ const adminManageApi = {
   // [PATCH /api/admin/reservations/{id}/status] { status: COMPLETED | NO_SHOW }
   // 백엔드 규칙: "예약 완료" 상태에서만, "이용 완료" 또는 "노쇼"로만 바꿀 수 있어요.
   updateReservation: (id, status) =>
-      http.patch(`/admin/reservations/${id}/status`, { status: RESERVATION_STATUS_TO_BACK[status] }),
+      http.patch(`/admin/reservations/${seg(id)}/status`, { status: RESERVATION_STATUS_TO_BACK[status] }),
 
   // [PATCH /api/admin/reservations/{id}/cancel] { cancelReason }
   cancelReservation: (id, cancelReason = 'OPERATIONAL_ISSUE') =>
-      http.patch(`/admin/reservations/${id}/cancel`, { cancelReason }),
+      http.patch(`/admin/reservations/${seg(id)}/cancel`, { cancelReason }),
 
   // [GET /api/admin/users] 백엔드에 검색·필터가 없어서 프론트에서 걸러요.
   members: async ({ q = '', status = '', role = '' } = {}) => {
@@ -749,7 +749,7 @@ const adminManageApi = {
 
   // [PATCH /api/admin/users/{id}/status] { status }
   // 백엔드 규칙: 활성 ↔ 비활성/정지 만 가능, 탈퇴 회원은 바꿀 수 없어요.
-  updateMember: (id, status) => http.patch(`/admin/users/${id}/status`, { status }),
+  updateMember: (id, status) => http.patch(`/admin/users/${seg(id)}/status`, { status }),
 };
 
 // ───────── 관리자 – 어트랙션 등록·수정·상태·삭제 ✅ ─────────
@@ -768,7 +768,7 @@ function toAttractionBody(form) {
 const adminAttractionApi = {
   // [GET /api/attractions/{id}] 수정 화면에 채울 값 (입구 이동 시간까지 들어 있는 상세 API를 써요)
   attractionForEdit: async (id) => {
-    const d = await http.get(`/attractions/${id}`);
+    const d = await http.get(`/attractions/${seg(id)}`);
     return {
       id: d.attractionId,
       name: d.name,
@@ -787,15 +787,15 @@ const adminAttractionApi = {
   },
 
   // [PATCH /api/admin/attractions/{id}] 정보 수정
-  updateAttraction: (id, form) => http.patch(`/admin/attractions/${id}`, toAttractionBody(form)),
+  updateAttraction: (id, form) => http.patch(`/admin/attractions/${seg(id)}`, toAttractionBody(form)),
 
   // [PATCH /api/admin/attractions/{id}/status] { operationStatus }
   // 백엔드 규칙: 같은 상태로는 못 바꾸고, 운영중이 아닌 상태로 바꿀 때 이용 예정 예약이 있으면 막혀요.
   updateAttractionStatus: (id, status) =>
-      http.patch(`/admin/attractions/${id}/status`, { operationStatus: status }),
+      http.patch(`/admin/attractions/${seg(id)}/status`, { operationStatus: status }),
 
   // [DELETE /api/admin/attractions/{id}] 진짜로 지우지 않고 "삭제됨" 표시만 해요 (이용 예정 예약이 있으면 막혀요)
-  deleteAttraction: (id) => http.delete(`/admin/attractions/${id}`),
+  deleteAttraction: (id) => http.delete(`/admin/attractions/${seg(id)}`),
 };
 
 // ───────── 관리자 주문 · 환불 ✅ ─────────
@@ -825,7 +825,7 @@ const adminOrderApi = {
   // [GET /api/admin/orders/{id}] 상세: 주문 상품, 발급된 입장권, 결제번호(pgId)가 같이 와요.
   // 주문 상품에는 상품 "번호"만 있어서, 상품 목록에서 이름을 찾아 붙여요.
   orderDetail: async (id) => {
-    const [o, byId] = await Promise.all([http.get(`/admin/orders/${id}`), productsById()]);
+    const [o, byId] = await Promise.all([http.get(`/admin/orders/${seg(id)}`), productsById()]);
     return {
       ...toAdminOrder(o),
       pgId: o.pgId,
@@ -847,16 +847,16 @@ const adminOrderApi = {
   },
 
   // [POST /api/admin/orders/{id}/cancel] 결제 대기(PENDING) 주문만 취소할 수 있어요.
-  cancelOrder: (id) => http.post(`/admin/orders/${id}/cancel`),
+  cancelOrder: (id) => http.post(`/admin/orders/${seg(id)}/cancel`),
 
   // [POST /api/admin/payments/{pgId}/refunds] { reason }
   // 관리자 전체 환불: 그 주문의 "미사용" 입장권을 한꺼번에 환불해요.
-  refundOrder: (pgId, reason) => http.post(`/admin/payments/${pgId}/refunds`, { reason }),
+  refundOrder: (pgId, reason) => http.post(`/admin/payments/${seg(pgId)}/refunds`, { reason }),
 
   // [POST /api/admin/payments/{pgId}/refunds/partial] { ticketIds: [입장권번호], reason }
   // 관리자 부분 환불: 고른 입장권만 환불해요. 미사용이 아닌 입장권이 섞이면 서버가 거절해요.
   refundOrderPartial: (pgId, ticketIds, reason) =>
-      http.post(`/admin/payments/${pgId}/refunds/partial`, { ticketIds, reason }),
+      http.post(`/admin/payments/${seg(pgId)}/refunds/partial`, { ticketIds, reason }),
 };
 
 // ───────── 관리자 입장권 상품 ✅ ─────────
@@ -899,7 +899,7 @@ const adminProductApi = {
   // [PUT /api/admin/ticket-products/{id}] { name, price, description, saleStatus, stock, version }
   // 종류(type)는 수정할 수 없어요. version 이 서버 값과 다르면 "다른 요청에 의해 변경" 오류가 나요.
   updateProduct: (id, form) =>
-      http.put(`/admin/ticket-products/${id}`, {
+      http.put(`/admin/ticket-products/${seg(id)}`, {
         name: form.name.trim(),
         price: Number(form.price),
         description: form.description.trim(),
@@ -909,7 +909,7 @@ const adminProductApi = {
       }),
 
   // [DELETE /api/admin/ticket-products/{id}] 진짜로 지우지 않고 DELETED 상태로 바꿔요.
-  deleteProduct: (id) => http.delete(`/admin/ticket-products/${id}`),
+  deleteProduct: (id) => http.delete(`/admin/ticket-products/${seg(id)}`),
 };
 
 // ───────── 관리자 입장 처리 ✅ ─────────
