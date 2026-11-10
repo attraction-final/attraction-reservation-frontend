@@ -367,11 +367,18 @@ export const reservationApi = {
   cancel: (id) => http.patch(`/reservations/${toId(id)}/cancel`),
   // [GET /api/reservations/{id}] 내 예약 한 건 상세 (SearchReservationDetailResponse)
   // 남의 예약 번호를 넣으면 서버가 막아요. (userId 로 본인 것만 조회)
-  // 위치·탑승 시간은 응답에 없어서, 같이 온 attractionId 로 어트랙션 상세를 한 번 더 불러와요.
+  // 위치·탑승 시간은 응답에 없어서, 어트랙션 목록에서 같은 id 를 찾아 붙여요.
+  // 서버 응답의 attractionId 로 /attractions/{id} 를 "다시 요청"하지 않아요.
+  // (응답 값을 그대로 다음 요청 주소에 넣으면 보안 검사에서 Client-Side Request Forgery 로 잡혀요.
+  //  목록에서 찾기만 하면 응답 값이 요청 주소에 들어갈 일이 없어요)
   detail: async (id) => {
-    const r = await http.get(`/reservations/${toId(id)}`);
-    // 어트랙션이 삭제됐어도 예약 상세는 보여야 하니까, 실패하면 null 로 두고 넘어가요.
-    const a = await attractionApi.detail(r.attractionId).catch(() => null);
+    const [r, all] = await Promise.all([
+      http.get(`/reservations/${toId(id)}`),
+      // 목록을 못 불러와도 예약 상세는 보여야 하니까, 실패하면 빈 목록으로 두고 넘어가요.
+      attractionApi.list('ALL').catch(() => []),
+    ]);
+    // 어트랙션이 삭제됐으면 목록에 없어서 undefined → 아래에서 기본값을 써요.
+    const a = all.find((x) => x.id === r.attractionId);
     return {
       id: r.reservationId,
       number: r.reservationNumber,
