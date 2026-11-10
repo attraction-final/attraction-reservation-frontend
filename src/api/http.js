@@ -46,8 +46,30 @@ async function fetchCsrf() {
   return token;
 }
 
+// ───────── 요청 주소 안전 검사 ─────────
+// path 에는 주소창에서 온 값(예: /attractions/:id 의 id)이 섞여 들어와요.
+// 누군가 id 자리에 "../users/me" 같은 값을 넣은 링크를 보내면, 브라우저가 경로를 정리하면서
+// 우리 출입증(Authorization)을 단 채로 "엉뚱한 API"를 부르게 될 수 있어요. (Client-Side Request Forgery)
+// 그래서 서버로 보내기 전에, 우리 API 경로 모양이 맞는지 한 곳에서 검사해요.
+//  - '/' 로 시작해야 해요. ('//다른사이트' 처럼 시작하면 다른 주소로 갈 수 있어서 막아요)
+//  - 역슬래시(\), 공백·제어문자는 안 돼요.
+//  - 경로 조각 중에 '.' 이나 '..' 이 있으면 안 돼요. (%2e%2e 처럼 인코딩해서 숨긴 것도 풀어서 검사해요)
+const SAFE_PATH = /^\/(?!\/)[^\\\s]*$/;
+function assertSafePath(path) {
+  if (typeof path !== 'string') throw new ApiError('잘못된 요청 주소예요.', 400);
+  const [pathname] = path.split('?'); // 뒤의 ?쿼리 는 경로 조각이 아니라서 빼고 봐요
+  const segments = pathname.split('/').map((seg) => {
+    try { return decodeURIComponent(seg); } catch { return null; } // 잘못된 % 인코딩도 막아요
+  });
+  const hasDotSegment = segments.some((seg) => seg === null || seg === '.' || seg === '..' || seg.includes('/'));
+  if (!SAFE_PATH.test(path) || hasDotSegment) {
+    throw new ApiError('잘못된 요청 주소예요.', 400);
+  }
+}
+
 // ───────── 실제로 서버에 한 번 요청하기 ─────────
 async function send(method, path, body) {
+  assertSafePath(path);
   // Headers 객체: 일반 객체({})와 달리 키를 내부 목록에 따로 저장해서, 어떤 이름이 와도 객체 구조가 바뀌지 않아요.
   // fetch 가 원래 받는 형식이라 동작은 똑같아요.
   const headers = new Headers();
