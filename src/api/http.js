@@ -152,6 +152,19 @@ export function seg(value) {
   return encodeURIComponent(s);
 }
 
+// ───────── 숫자 id 검사 ─────────
+// 어트랙션·예약·주문·슬롯·회원·상품 id 는 백엔드에서 모두 Long(양의 정수)이에요.
+// 그래서 경로에 넣기 전에 "진짜 양의 정수인지" 확인하고, 문자열이 아니라 숫자로 바꿔서 넣어요.
+//   http.get(`/attractions/${toId(id)}`)
+//  - 주소창의 값("3")도, 서버 응답의 값(r.attractionId)도 같은 규칙으로 검사해요.
+//  - 숫자로 바꾸고 나면 '/', '..' 같은 글자가 들어갈 자리가 아예 없어요.
+//  - 결제 id(pgId)처럼 글자가 섞인 값은 toId 가 아니라 seg() 를 써요.
+export function toId(value) {
+  const n = typeof value === 'number' ? value : (/^[1-9]\d*$/.test(String(value)) ? Number(value) : NaN);
+  if (!Number.isSafeInteger(n) || n <= 0) throw new ApiError('잘못된 요청 주소예요.', 400);
+  return n;
+}
+
 // { date: '2026-10-24', q: '' } → "?date=2026-10-24" (빈 값은 빼고 만들어 줘요)
 export function toQuery(params = {}) {
   const sp = new URLSearchParams();
