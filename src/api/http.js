@@ -27,22 +27,34 @@ function needsCsrf(method, path) {
   return path.startsWith('/auth/') || path === '/users/signup';
 }
 
+// CSRF 도장의 머리글 이름. 백엔드 SecurityConfig 의 CookieCsrfTokenRepository 기본값과 같아요.
+// 서버가 알려 주는 이름을 그대로 머리글 키로 쓰지 않고, 이 고정값만 써요.
+// (아무 이름이나 키로 쓰면 Authorization 같은 머리글을 덮어쓸 수 있고, 보안 검사 도구도 경고해요)
+const CSRF_HEADER_NAME = 'X-XSRF-TOKEN';
+
 // CSRF 도장 받기: GET /api/auth/csrf → { headerName, token }
+// 서버가 준 headerName 은 "우리가 아는 이름이 맞는지" 확인하는 데만 쓰고, 토큰 문자열만 돌려줘요.
 async function fetchCsrf() {
   const res = await fetch(API_BASE + '/auth/csrf', { credentials: 'include' });
   const json = await res.json().catch(() => null);
   if (!res.ok || !json?.data) throw new ApiError('CSRF 토큰을 받지 못했어요.', res.status);
-  return json.data; // { headerName: 'X-XSRF-TOKEN', token: '...' }
+
+  const { headerName, token } = json.data;
+  if (headerName !== CSRF_HEADER_NAME || typeof token !== 'string' || token === '') {
+    throw new ApiError('CSRF 토큰 형식이 올바르지 않아요.', res.status);
+  }
+  return token;
 }
 
 // ───────── 실제로 서버에 한 번 요청하기 ─────────
 async function send(method, path, body) {
-  const headers = {};
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  // Headers 객체: 일반 객체({})와 달리 키를 내부 목록에 따로 저장해서, 어떤 이름이 와도 객체 구조가 바뀌지 않아요.
+  // fetch 가 원래 받는 형식이라 동작은 똑같아요.
+  const headers = new Headers();
+  if (body !== undefined) headers.set('Content-Type', 'application/json');
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
   if (needsCsrf(method, path)) {
-    const csrf = await fetchCsrf();
-    headers[csrf.headerName] = csrf.token;
+    headers.set(CSRF_HEADER_NAME, await fetchCsrf()); // 머리글 이름은 서버 값이 아니라 고정값
   }
 
   const res = await fetch(API_BASE + path, {
