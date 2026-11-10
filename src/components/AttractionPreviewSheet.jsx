@@ -21,7 +21,8 @@ export default function AttractionPreviewSheet({ attraction: a, pickOrder, full,
   const disabled = closed || (!pickOrder && full);
 
   return (
-    <div className="map-sheet" role="dialog" aria-label={`${a.name} 미리보기`}>
+    // <dialog open>: 화면을 막지 않는 "열린 대화상자" 태그예요. 지도는 계속 누를 수 있어요. (role="dialog" 대신)
+    <dialog open className="map-sheet" aria-label={`${a.name} 미리보기`}>
       <div className="row gap-12">
         <img src={a.image} alt="" className="map-sheet__img" />
         <span className="stack grow" style={{ gap: 3 }}>
@@ -48,6 +49,6 @@ export default function AttractionPreviewSheet({ attraction: a, pickOrder, full,
         className={pickOrder ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm'} style={{ width: '100%' }}>
         {pickOrder ? `루트에서 빼기 (${pickOrder}번째)` : '루트에 넣기'}
       </button>
-    </div>
+    </dialog>
   );
 }

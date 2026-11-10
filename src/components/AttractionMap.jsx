@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { loadKakaoMap } from '../api/Kakaomap.js';
+import { loadKakaoMap } from '../api/kakaoMap.js';
 import { hasLatLng } from '../utils/geo.js';
+import { pinAriaLabel, pinDotText, pinZIndex } from './mapPin.js';
 
 /**
  * 카카오맵 위에 어트랙션 핀을 찍고, 핀을 눌러 "미리보기"를 고르는 지도 부품이에요.
@@ -146,7 +147,7 @@ export default function AttractionMap({
     pins.current.forEach(({ overlay, btn, attraction }, id) => {
       const pickOrder = pickedIds.indexOf(id) + 1; // 0 이면 안 고름
       paintPin(btn, attraction, pickOrder, id === selectedId);
-      overlay.setZIndex(id === selectedId ? 10 : pickOrder ? 3 : 1); // 고른 핀이 다른 핀에 가리지 않게
+      overlay.setZIndex(pinZIndex(id === selectedId, pickOrder)); // 고른 핀이 다른 핀에 가리지 않게
     });
   }, [sdk, attractions, pickedIds, selectedId]);
 
@@ -177,8 +178,7 @@ export default function AttractionMap({
     if (!me.current) {
       const dotEl = document.createElement('div');
       dotEl.className = 'me-dot';
-      dotEl.setAttribute('role', 'img');
-      dotEl.setAttribute('aria-label', '내 위치');
+      dotEl.setAttribute('aria-hidden', 'true'); // 꾸밈용 점. 거리 정보는 미리보기·목록에 글자로 나와요
       const dot = new kakao.maps.CustomOverlay({ position: latLng, content: dotEl, xAnchor: 0.5, yAnchor: 0.5, zIndex: 5 });
       const circle = new kakao.maps.Circle({
         center: latLng,
@@ -235,13 +235,12 @@ function createPinButton(a) {
 function paintPin(btn, a, pickOrder, selected) {
   const closed = a.status !== 'OPERATING';
   const dot = btn.querySelector('.map-pin__dot');
-  dot.textContent = closed ? '×' : pickOrder ? String(pickOrder) : '+';
+  dot.textContent = pinDotText(closed, pickOrder);
   btn.classList.toggle('is-picked', pickOrder > 0);
   btn.classList.toggle('is-selected', selected);
   btn.classList.toggle('is-closed', closed);
   btn.setAttribute('aria-pressed', String(selected));
-  const state = closed ? '운영 안 함' : pickOrder ? `${pickOrder}번째로 고름` : '아직 안 고름';
-  btn.setAttribute('aria-label', `${a.name}, ${a.zone || ''} ${state}`.replace(/\s+/g, ' '));
+  btn.setAttribute('aria-label', pinAriaLabel(a, closed, pickOrder));
 }
 
 // 좌표로 지도를 옮기되, 아래 시트 높이만큼 위로 올려서 핀이 시트 위쪽에 오게 해요.

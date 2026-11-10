@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDistance, hasLatLng, haversine } from '../utils/geo.js';
+import { pinAriaLabel, pinDotText, pinZIndex } from './mapPin.js';
 
 /**
  * 카카오맵 없이, 백엔드가 준 좌표만으로 그리는 "간이 지도"예요. (임시용)
@@ -85,8 +86,11 @@ export default function SimpleAttractionMap({
 
   return (
     <div className="map-wrap">
-      {/* 빈 곳을 누르면 미리보기 닫기 */}
-      <div ref={box} className="map-canvas simple-map" onClick={() => onSelect(null)}>
+      <div ref={box} className="map-canvas simple-map">
+        {/* 지도 빈 곳 = 바닥에 깔린 진짜 <button>. 누르면 미리보기를 닫아요.
+            (div 에 onClick 을 달면 키보드로 쓸 수 없어서, 처음부터 button 으로 만들었어요.
+             키보드 사용자는 미리보기 카드의 × 버튼으로 닫으니, Tab 순서에서는 빼요) */}
+        <button type="button" className="simple-map__backdrop" tabIndex={-1} aria-label="미리보기 닫기" onClick={() => onSelect(null)} />
         {projection && (
           <div className="simple-map__layer" style={{ transform: `translateY(${shiftY}px)` }}>
             {/* 내 위치 오차 원 + 점 (핀보다 아래에 깔려요) */}
@@ -97,30 +101,15 @@ export default function SimpleAttractionMap({
                   width: myPosition.accuracy * projection.scale * 2,
                   height: myPosition.accuracy * projection.scale * 2,
                 }} />
-                <div className="me-dot simple-map__me" role="img" aria-label="내 위치" style={{ left: me.x, top: me.y }} />
+                {/* 꾸밈용 점이라 스크린리더에서는 숨겨요. 거리 정보는 미리보기·목록에 글자로 나와요 */}
+                <div className="me-dot simple-map__me" aria-hidden="true" style={{ left: me.x, top: me.y }} />
               </>
             )}
 
-            {located.map((a) => {
-              const { x, y } = projection.toPx(a);
-              const pickOrder = pickedIds.indexOf(a.id) + 1;
-              const selected = a.id === selectedId;
-              const closed = a.status !== 'OPERATING';
-              const state = closed ? '운영 안 함' : pickOrder ? `${pickOrder}번째로 고름` : '아직 안 고름';
-              return (
-                // 바깥 div: 위치 잡기(핀 아래 끝이 좌표), 안쪽 button: 모양(커지기 효과)
-                <div key={a.id} className="simple-map__pin-pos" style={{ left: x, top: y, zIndex: selected ? 10 : pickOrder ? 3 : 1 }}>
-                  <button type="button"
-                    className={`map-pin${pickOrder ? ' is-picked' : ''}${selected ? ' is-selected' : ''}${closed ? ' is-closed' : ''}`}
-                    aria-pressed={selected}
-                    aria-label={`${a.name}, ${a.zone || ''} ${state}`.replace(/\s+/g, ' ')}
-                    onClick={(e) => { e.stopPropagation(); onSelect(a.id); }}>
-                    <span className="map-pin__dot">{closed ? '×' : pickOrder || '+'}</span>
-                    <span className="map-pin__name">{a.name}</span>
-                  </button>
-                </div>
-              );
-            })}
+            {located.map((a) => (
+              <SimplePin key={a.id} attraction={a} point={projection.toPx(a)}
+                pickOrder={pickedIds.indexOf(a.id) + 1} selected={a.id === selectedId} onSelect={onSelect} />
+            ))}
           </div>
         )}
 
@@ -129,11 +118,31 @@ export default function SimpleAttractionMap({
       </div>
 
       {meDistance != null && !showMe && (
-        <div className="simple-map__far" role="status">
+        // <output>: 바뀌는 안내 문구를 스크린리더가 알아서 읽어 주는 태그예요. (role="status" 대신)
+        <output className="simple-map__far">
           내 위치가 공원에서 약 {formatDistance(meDistance)} 떨어져 있어 지도에는 표시하지 않아요.
-        </div>
+        </output>
       )}
       {children}
+    </div>
+  );
+}
+
+// 핀 하나. 바깥 div 는 위치 잡기(핀 아래 끝이 좌표), 안쪽 button 은 모양(커지기 효과)을 맡아요.
+function SimplePin({ attraction: a, point, pickOrder, selected, onSelect }) {
+  const closed = a.status !== 'OPERATING';
+  const classes = ['map-pin'];
+  if (pickOrder > 0) classes.push('is-picked');
+  if (selected) classes.push('is-selected');
+  if (closed) classes.push('is-closed');
+
+  return (
+    <div className="simple-map__pin-pos" style={{ left: point.x, top: point.y, zIndex: pinZIndex(selected, pickOrder) }}>
+      <button type="button" className={classes.join(' ')} aria-pressed={selected}
+        aria-label={pinAriaLabel(a, closed, pickOrder)} onClick={() => onSelect(a.id)}>
+        <span className="map-pin__dot">{pinDotText(closed, pickOrder)}</span>
+        <span className="map-pin__name">{a.name}</span>
+      </button>
     </div>
   );
 }

@@ -160,7 +160,12 @@ export function seg(value) {
 //  - 숫자로 바꾸고 나면 '/', '..' 같은 글자가 들어갈 자리가 아예 없어요.
 //  - 결제 id(pgId)처럼 글자가 섞인 값은 toId 가 아니라 seg() 를 써요.
 export function toId(value) {
-  const n = typeof value === 'number' ? value : (/^[1-9]\d*$/.test(String(value)) ? Number(value) : NaN);
+  let n = Number.NaN; // 아래 두 경우가 아니면 "숫자 아님"으로 남아서 차단돼요
+  if (typeof value === 'number') {
+    n = value;
+  } else if (/^[1-9]\d*$/.test(String(value))) { // "3" 처럼 0으로 시작하지 않는 숫자 글자만
+    n = Number(value);
+  }
   if (!Number.isSafeInteger(n) || n <= 0) throw new ApiError('잘못된 요청 주소예요.', 400);
   return n;
 }

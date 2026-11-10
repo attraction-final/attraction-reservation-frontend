@@ -315,8 +315,8 @@ img { display: block; }
   touch-action: auto; /* 끌어서 움직이는 기능이 없으니 페이지 스크롤을 막지 않아요 */
   background-color: #DCE8F4;
   background-image:
-          linear-gradient(rgba(47, 111, 219, 0.08) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(47, 111, 219, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(47, 111, 219, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 111, 219, 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 .simple-map__layer { position: absolute; inset: 0; transition: transform 0.2s ease; }
@@ -341,3 +341,20 @@ img { display: block; }
 @media (prefers-reduced-motion: reduce) {
   .simple-map__layer { transition: none; }
 }
+
+
+/* =========================================================
+   보안·접근성 정리 (SonarCloud 지적 반영)
+   - <dialog open> 은 브라우저 기본 스타일(가운데 정렬·테두리·여백)이 있어서 미리보기 시트 모양으로 되돌려요.
+   - <output> 은 기본이 inline 이라 안내 상자 모양(.map-notice 의 flex)이 그대로 적용되게 둬요.
+   - 간이 지도의 바닥 버튼은 지도 전체를 덮고, 핀만 그 위에서 눌리게 해요.
+   ========================================================= */
+dialog.map-sheet {
+  margin: 0; border: 0; top: auto; width: auto; height: auto;
+  max-width: none; max-height: none; color: inherit;
+}
+.simple-map__backdrop { position: absolute; inset: 0; border: 0; padding: 0; margin: 0; background: transparent; cursor: default; }
+.simple-map__backdrop:focus { outline: none; }
+.simple-map__layer { pointer-events: none; }
+.simple-map__pin-pos { pointer-events: auto; }
+output.simple-map__far { display: block; }
