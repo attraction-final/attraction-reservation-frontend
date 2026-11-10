@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import AttractionMap from '../components/AttractionMap.jsx';
+import SimpleAttractionMap from '../components/SimpleAttractionMap.jsx';
+import { KAKAO_MAP_APP_KEY } from '../config.js';
 import AttractionPreviewSheet from '../components/AttractionPreviewSheet.jsx';
 import { BackHeader, Empty, Loading } from '../components/ui.jsx';
 import { useApi } from '../hooks/useApi.js';
@@ -13,6 +15,11 @@ import { useAuth } from '../context/AuthContext.jsx';
 
 // 아래 미리보기 시트가 지도를 가리는 높이의 절반쯤(px). 고른 핀이 시트 위에 보이게 지도를 이만큼 올려요.
 const SHEET_OFFSET_PX = 80;
+
+// 지도 고르기: 카카오 키가 있으면 카카오맵, 없으면 백엔드 좌표만으로 그리는 간이 지도(임시)를 써요.
+// 두 부품은 props 가 같아서 이 한 줄로 바꿔 끼울 수 있어요.
+const USE_KAKAO = Boolean(KAKAO_MAP_APP_KEY);
+const MapView = USE_KAKAO ? AttractionMap : SimpleAttractionMap;
 
 // 어트랙션 5개를 고르면 지금 위치에서 출발해 걷는 시간이 가장 짧은 방문 순서를 추천받아요.
 // 어트랙션은 "지도"에서 핀을 눌러 고르거나, "목록"에서 체크해서 골라요. 두 화면은 같은 picked 를 같이 써요.
@@ -169,7 +176,7 @@ export default function RouteSetup() {
         </div>
 
         {view === 'map' ? (
-          <AttractionMap
+          <MapView
             attractions={list}
             pickedIds={picked}
             selectedId={selectedId}
@@ -186,7 +193,9 @@ export default function RouteSetup() {
               aria-pressed={geo.status === GEO_STATUS.TRACKING && follow}>
               <Icon name="locate" size={18} strokeWidth={2.2} />
               {geo.status === GEO_STATUS.REQUESTING ? '확인 중…'
-                : geo.status === GEO_STATUS.TRACKING ? (follow ? '내 위치 따라가는 중' : '내 위치로')
+                : geo.status === GEO_STATUS.TRACKING
+                  // 간이 지도는 항상 공원 전체가 보여서 "따라가기"가 없어요
+                  ? (!USE_KAKAO ? '내 위치 표시 중' : follow ? '내 위치 따라가는 중' : '내 위치로')
                 : '내 위치 보기'}
             </button>
 
@@ -209,7 +218,7 @@ export default function RouteSetup() {
                 onClose={() => setSelectedId(null)}
               />
             )}
-          </AttractionMap>
+          </MapView>
         ) : (
           <div className="stack gap-8">
             <div className="row gap-8" style={{ flexShrink: 0 }}>
