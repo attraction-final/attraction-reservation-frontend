@@ -515,17 +515,23 @@ function toRouteResult(res, byId) {
 export const ROUTE_PICK_COUNT = 5;
 
 export const routeApi = {
-  // [GET /api/route-recommendations/attractions] → [{ attractionId, attractionName }]
+  // [GET /api/route-recommendations/attractions] → [{ attractionId, attractionName, latitude, longitude }]
   // 추천에 고를 수 있는 어트랙션(운영 중이고 좌표가 등록된 곳)과 사진이 있는 어트랙션 목록을 합쳐서 줘요.
   // 운영하지 않거나 좌표가 없는 어트랙션을 고르면 추천이 실패해서, 처음부터 선택지에서 빼요.
   // 어트랙션 사이 이동 정보는 여기서 보장하지 않아요. 없으면 추천 요청이 409로 실패해요.
+  // 좌표(lat, lng)는 지도에 핀을 찍을 때 써요. 백엔드가 아직 좌표를 안 주면 null 이고, 그 어트랙션은 지도에만 안 보여요.
   recommendableAttractions: async () => {
     const [recommendable, all] = await Promise.all([
       http.get('/route-recommendations/attractions'),
       attractionApi.list('ALL'),
     ]);
-    const ids = new Set(recommendable.map((a) => a.attractionId));
-    return all.filter((a) => ids.has(a.id));
+    const locationById = new Map(recommendable.map((a) => [
+      a.attractionId,
+      { lat: a.latitude ?? null, lng: a.longitude ?? null },
+    ]));
+    return all
+        .filter((a) => locationById.has(a.id))
+        .map((a) => ({ ...a, ...locationById.get(a.id) }));
   },
 
   // [POST /api/route-recommendations] { latitude, longitude, accuracy, ..., attractionIds }

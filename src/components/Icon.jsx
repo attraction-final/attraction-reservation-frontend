@@ -25,6 +25,8 @@ const PATHS = {
   // 말풍선 (어트랙션 질문 버튼)
   chat: <><path d="M4 5.5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9l-4.5 3.5V17.5H4a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1z" /><path d="M8 10.5h8M8 13.5h5" /></>,
   walk: <><circle cx="13" cy="4" r="2" /><path d="M9 21l2-6 3 3v3M7 12l3-4 4 1 2 4" /></>,
+  // 조준점 (지도 "내 위치" 버튼)
+  locate: <><circle cx="12" cy="12" r="4" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" /></>,
 };
 
 export default function Icon({ name, size = 22, strokeWidth = 1.9, color = 'currentColor', style }) {

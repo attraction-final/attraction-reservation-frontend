@@ -11,3 +11,9 @@ export const API_BASE = '/api';
 //  - 개발: 프론트(5173)와 백엔드(8080)가 따로 떠 있어서 백엔드 주소를 직접 적어요.
 //  - 배포: 같은 서버에서 프론트와 백엔드를 같이 내보내면 빈 값('')이면 돼요.
 export const OAUTH_BASE = import.meta.env.VITE_OAUTH_BASE_URL ?? '';
+
+// 카카오맵 JavaScript 키 (.env 파일에서 정해요)
+// 카카오 개발자 콘솔 → 내 애플리케이션 → 앱 키 → "JavaScript 키" 를 넣어요.
+// 이 키는 브라우저에 그대로 보이는 값이라 숨길 수 없어요. 대신 콘솔의 [플랫폼 → Web] 에 사이트 도메인을 꼭 등록해서
+// 등록한 주소에서만 지도가 열리게 막아요. (예: http://localhost:5173, 배포 주소)
+export const KAKAO_MAP_APP_KEY = import.meta.env.VITE_KAKAO_MAP_APP_KEY ?? '';

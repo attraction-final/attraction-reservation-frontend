@@ -215,3 +215,93 @@ img { display: block; }
 /* 불러오는 중 / 오류 */
 .state-box { padding: 40px 16px; text-align: center; color: var(--muted); font-size: 14px; }
 .toast { background: var(--green-soft); color: #145C32; border-radius: 16px; padding: 12px 14px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+
+/* =========================================================
+   지도에서 어트랙션 고르기 (루트 추천 화면)
+   - 지도 SDK 가 만드는 핀(<button class="map-pin">)도 여기 스타일을 따라요.
+   ========================================================= */
+.map-wrap {
+  position: relative; flex: 1; min-height: 320px;
+  border-radius: 22px; overflow: hidden;
+  background: #DCE8F4; box-shadow: var(--shadow);
+}
+/* 지도 드래그가 페이지 스크롤과 싸우지 않게, 지도 안 터치는 지도가 가져가요 */
+.map-canvas { position: absolute; inset: 0; touch-action: none; }
+.map-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--muted); }
+.map-fallback { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; font-size: 14px; }
+
+/* 어트랙션 핀: 동그라미(+ / 고른 순서 숫자) 아래에 이름표. 누르는 영역은 최소 44px */
+.map-pin {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: 44px; min-height: 44px; padding: 0; border: 0; background: none;
+  transform-origin: 50% 100%; transition: transform 0.15s ease;
+}
+.map-pin__dot {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; color: var(--blue-ink); border: 2.5px solid var(--blue);
+  font-family: var(--font-display); font-size: 16px; line-height: 1;
+  box-shadow: 0 3px 8px rgba(31, 42, 68, 0.22);
+}
+.map-pin__name {
+  max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 2px 7px; border-radius: 999px; background: #fff;
+  font-size: 11px; font-weight: 700; color: var(--ink);
+  box-shadow: 0 2px 6px rgba(31, 42, 68, 0.14);
+}
+.map-pin.is-picked .map-pin__dot { background: var(--pink); color: #fff; border-color: #fff; }
+.map-pin.is-closed .map-pin__dot { background: #F1F3F7; color: var(--gray-ink); border: 2px dashed #AEB8CB; }
+.map-pin.is-selected { transform: scale(1.18); }
+.map-pin.is-selected .map-pin__name { background: var(--ink); color: #fff; }
+.map-pin:focus-visible { outline: none; }
+.map-pin:focus-visible .map-pin__dot { outline: 3px solid var(--yellow); outline-offset: 2px; }
+
+/* 내 위치 점 (오차 원은 지도 SDK 의 Circle 로 그려요) */
+.me-dot { width: 16px; height: 16px; border-radius: 50%; background: var(--blue); border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(47, 111, 219, 0.35); }
+
+/* 지도 위에 떠 있는 버튼·안내 */
+.map-ctrl {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  height: 40px; padding: 0 12px; border-radius: 999px; border: 0;
+  display: flex; align-items: center; gap: 6px;
+  background: #fff; color: var(--blue-ink); font-size: 13px; font-weight: 700;
+  box-shadow: 0 4px 12px rgba(31, 42, 68, 0.16);
+}
+.map-ctrl[aria-pressed="true"] { background: var(--blue); color: #fff; }
+.map-ctrl:disabled { opacity: 0.7; }
+.map-notices { position: absolute; top: 58px; left: 10px; right: 10px; z-index: 2; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+.map-notice {
+  pointer-events: auto; background: rgba(255, 255, 255, 0.96); border-radius: 14px;
+  padding: 9px 12px; font-size: 12px; line-height: 1.5; color: var(--ink);
+  box-shadow: 0 4px 12px rgba(31, 42, 68, 0.12);
+  display: flex; align-items: center; gap: 8px;
+}
+.map-notice > span { flex: 1; }
+.map-notice__retry { flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--blue); background: #fff; color: var(--blue-ink); font-size: 12px; font-weight: 700; }
+
+/* 핀을 눌렀을 때 아래에서 올라오는 미리보기 (지도 안쪽 아래에 붙어요) */
+.map-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+  background: #fff; border-radius: 22px 22px 0 0; padding: 14px 14px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 -6px 18px rgba(31, 42, 68, 0.12);
+  animation: map-sheet-up 0.18s ease-out;
+}
+.map-sheet__img { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; flex-shrink: 0; }
+@keyframes map-sheet-up { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* 고른 순서 요약 줄 (가로로 밀어서 봐요) */
+.picked-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.picked-row::-webkit-scrollbar { display: none; }
+.picked-chip {
+  flex-shrink: 0; height: 32px; padding: 0 10px 0 4px; border-radius: 999px;
+  display: flex; align-items: center; gap: 6px;
+  background: #fff; border: 1.5px solid var(--pink); color: var(--ink); font-size: 12px; font-weight: 700;
+}
+.picked-chip__no { width: 24px; height: 24px; border-radius: 50%; background: var(--pink); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 13px; }
+
+/* 움직임을 줄이도록 설정한 사람에게는 핀 커지기·시트 올라오기 효과를 끄기 */
+@media (prefers-reduced-motion: reduce) {
+  .map-pin { transition: none; }
+  .map-sheet { animation: none; }
+}
