@@ -151,11 +151,11 @@ flowchart LR
 
 | 문서 | 설명 |
 |---|---|
-| [프론트엔드 개발 가이드](docs/DEVELOPMENT.md) | 폴더 구조, 화면 ↔ 주소, 환경 변수, 데이터 흐름, 호출하는 API 목록, 배포 시 주의할 점을 정리한 문서입니다. |
+| [프론트엔드 개발 가이드](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/DEVELOPMENT.md) | 폴더 구조, 화면 ↔ 주소, 환경 변수, 데이터 흐름, 호출하는 API 목록, 배포 시 주의할 점을 정리한 문서입니다. |
 | [백엔드 저장소](https://github.com/attraction-final/attraction-reservation) | Spring Boot API 서버 코드입니다. |
-| [API 명세서](https://링크를-적어-주세요) | 인증 · 유저 · 어트랙션 · 슬롯 · 예약 · 주문 · 결제 · 루트 추천 API 명세입니다. |
-| [ERD](https://링크를-적어-주세요) | 전체 테이블 구조입니다. |
-| [기획안](https://링크를-적어-주세요) | 기획 배경, 문제 정의, 비즈니스 규칙입니다. |
+| [API 명세서](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/docs/api.md) | 프론트엔드 코드가 실제로 부르는 API(src/api/index.js 기준 목록) 입니다. |
+| [ERD](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/docs/images/erd.png) | 전체 테이블 구조입니다. |
+| [기획안](https://app.notion.com/p/teamsparta/3f82dc3ef51480478333f70f5f2dbd57) | 기획 배경, 문제 정의, 비즈니스 규칙입니다. |
 
 ---
 
@@ -183,4 +183,4 @@ VITE_KAKAO_MAP_APP_KEY=카카오_JavaScript_키
 - `.env.local` 은 `.gitignore` 에 포함되어 있어 깃에 올라가지 않습니다.
 - 키를 비워 두면 카카오맵 대신 **간이 지도**(좌표대로 핀만 찍은 지도)가 표시됩니다.
 
-환경 변수 전체 목록과 배포 설정은 [프론트엔드 개발 가이드](docs/DEVELOPMENT.md)를 참고해 주세요.
+환경 변수 전체 목록과 배포 설정은 [프론트엔드 개발 가이드](DEVELOPMENT.md)를 참고해 주세요.

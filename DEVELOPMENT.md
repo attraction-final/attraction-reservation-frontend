@@ -207,66 +207,10 @@ attraction-reservation-frontend/
 
 ---
 
-## 5. 프론트가 부르는 API 목록
+## 5. API
 
-> 모든 주소 앞에 `/api` 가 붙습니다.
-> 정확한 요청·응답 필드는 **백엔드 API 명세**와 `src/api/index.js` 의 주석 · toXxx 함수를 기준으로 보세요.
-
-### 인증 · 회원
-| 메서드 | 주소 | 쓰는 곳 |
-|---|---|---|
-| GET | `/auth/csrf` | CSRF 도장 받기 (`http.js` 가 자동으로) |
-| POST | `/auth/login` | 로그인 |
-| POST | `/auth/refresh` | 출입증 재발급 (`http.js` 가 자동으로) |
-| POST | `/auth/logout` | 로그아웃 |
-| POST | `/auth/oauth2/exchange` | 소셜 로그인 일회용 코드 → 출입증 |
-| POST | `/users/signup` | 회원가입 (가입 후 바로 로그인) |
-| GET / PATCH / DELETE | `/users/me` | 내 정보 / 닉네임 수정 / 탈퇴 |
-| PATCH | `/users/me/password` | 비밀번호 변경 |
-
-### 어트랙션 · 슬롯 · 예약 · 루트
-| 메서드 | 주소 | 쓰는 곳 |
-|---|---|---|
-| GET | `/attractions` | 어트랙션 목록 (홈의 운영 현황도 이걸로 계산) |
-| GET | `/attractions/{id}` | 어트랙션 상세 |
-| GET | `/attractions/{id}/slots?date=` | 슬롯 목록 (로그인 필요) |
-| POST | `/attractions/questions` | 어트랙션 질문 `{question}` (로그인 필요, 200자까지) |
-| GET | `/reservations/me` | 내 예약 |
-| GET | `/reservations/{id}` | 내 예약 상세 |
-| POST | `/reservations` | 예약하기 `{ticketId, slotId}` |
-| PATCH | `/reservations/{id}/cancel` | 예약 취소 |
-| GET | `/route-recommendations/attractions` | 추천에 고를 수 있는 어트랙션 + 좌표 `{attractionId, attractionName, latitude, longitude}` |
-| POST | `/route-recommendations` | 루트 추천 `{latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed, timestamp, attractionIds}` (정확히 5개) |
-
-### 입장권 · 주문 · 결제
-| 메서드 | 주소 | 쓰는 곳 |
-|---|---|---|
-| GET | `/ticket-products` | 입장권 상품 목록 |
-| GET | `/tickets/me` | 내 입장권 |
-| POST | `/orders` | 주문 생성 `{visitDate, items: [{ticketProductId, quantity}]}` |
-| GET | `/orders/{id}` | 주문 상세 (결제 화면) |
-| GET | `/orders/me` | 내 결제 내역 |
-| GET | `/config/portone` | 포트원 상점 정보 |
-| POST | `/payments/{pgId}/confirm` | 결제 승인 |
-| POST | `/payments/{pgId}/refunds/partial` | 내 입장권 한 장 환불 |
-
-### 관리자 (ADMIN 만)
-| 메서드 | 주소 | 쓰는 곳 |
-|---|---|---|
-| POST / PATCH / DELETE | `/admin/attractions`, `/admin/attractions/{id}` | 어트랙션 등록 / 수정 / 삭제 |
-| PATCH | `/admin/attractions/{id}/status` | 어트랙션 운영 상태 변경 |
-| GET / POST | `/admin/attractions/{id}/slots` | 슬롯 조회 / 추가 |
-| PATCH | `/admin/slots/{id}/status`, `/time`, `/capacity` | 슬롯 상태 / 시간 / 정원 변경 |
-| DELETE | `/admin/slots/{id}` | 슬롯 삭제 |
-| GET | `/admin/reservations` | 예약 목록 |
-| PATCH | `/admin/reservations/{id}/status`, `/cancel` | 예약 상태 변경 / 취소 |
-| GET | `/admin/users` | 회원 목록 |
-| PATCH | `/admin/users/{id}/status` | 회원 상태 변경 |
-| POST / PUT / DELETE | `/admin/ticket-products`, `/admin/ticket-products/{id}` | 입장권 상품 등록 / 수정 / 삭제 |
-| GET | `/admin/orders`, `/admin/orders/{id}` | 주문 목록 / 상세 |
-| POST | `/admin/orders/{id}/cancel` | 결제 대기 주문 취소 |
-| POST | `/admin/payments/{pgId}/refunds`, `/refunds/partial` | 전체 환불 / 부분 환불 |
-| POST | `/admin/tickets/entry` | 입장 처리 `{ticketCode}` |
+프론트가 부르는 API 목록은 [API 요약](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/docs/api.md)에 정리되어 있습니다.
+정확한 요청·응답 필드는 백엔드 저장소와 `src/api/index.js` 의 주석 · toXxx 함수를 기준으로 봐 주세요.
 
 ### 백엔드 이름 ↔ 화면 이름 (헷갈리기 쉬운 것)
 
