@@ -572,11 +572,11 @@ function toAdminSlot(s) {
   };
 }
 
-// 일괄 생성할 시작 시각: 10:00, 10:30, ... 21:30 (30분 간격)
+// 일괄 생성할 시작 시각: 10:00, 10:15, ... 21:30 (15분 간격)
 // 폐장(22:00) 전에 끝나지 않는 시각은 백엔드가 알아서 거절해요.
 function operatingStartTimes() {
   const times = [];
-  for (let m = 10 * 60; m <= 21 * 60 + 30; m += 30) {
+  for (let m = 10 * 60; m <= 21 * 60 + 30; m += 15) {
     times.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
   }
   return times;
