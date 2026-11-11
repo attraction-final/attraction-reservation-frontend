@@ -6,7 +6,6 @@
 
 **놀이공원 어트랙션 예약 · 최적 루트 추천 서비스의 프론트엔드 저장소입니다.**
 
-<!-- TODO: 배포 주소가 정해지면 아래 링크를 바꿔 주세요 -->
 [서비스 바로가기](https://attraction-reservation-frontend.vercel.app/) · [백엔드 저장소](https://github.com/attraction-final/attraction-reservation)
 
 </div>
@@ -19,10 +18,9 @@
 2. [주요 기능](#-주요-기능)
 3. [기술 스택](#-기술-스택)
 4. [아키텍처](#-아키텍처)
-5. [담당 팀원](#-담당-팀원)
+5. [프론트 담당](#team)
 6. [상세 문서](#-상세-문서)
-7. [서비스 화면](#-서비스-화면)
-8. [실행 방법](#-실행-방법)
+7. [실행 방법](#-실행-방법)
 
 ---
 
@@ -138,12 +136,12 @@ flowchart LR
 
 ---
 
-## 👥 프론트 담당 
+<a id="team"></a>
+## 👥 프론트 담당
 
-<!-- TODO: 각자 맡은 파트와 GitHub 주소를 채워 주세요 -->
-
- 이름 | 이윤지 
-
+| 항목 | 내용 |
+|---|---|
+| 이름 | 이윤지 |
 
 ---
 
@@ -151,7 +149,7 @@ flowchart LR
 
 | 문서 | 설명 |
 |---|---|
-| [프론트엔드 개발 가이드](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/DEVELOPMENT.md) | 폴더 구조, 화면 ↔ 주소, 환경 변수, 데이터 흐름, 호출하는 API 목록, 배포 시 주의할 점을 정리한 문서입니다. |
+| [프론트엔드 개발 가이드](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/DEVELOPMENT.md) | 폴더 구조, 화면 ↔ 주소, 환경 변수, 데이터 흐름, 배포 시 주의할 점을 정리한 문서입니다. |
 | [백엔드 저장소](https://github.com/attraction-final/attraction-reservation) | Spring Boot API 서버 코드입니다. |
 | [API 명세서](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/docs/api.md) | 프론트엔드 코드가 실제로 부르는 API(src/api/index.js 기준 목록) 입니다. |
 | [ERD](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/docs/images/erd.png) | 전체 테이블 구조입니다. |
