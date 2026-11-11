@@ -1,7 +1,7 @@
 # 프론트엔드 개발 가이드
 
-[README](../README.md)에서 다루지 않은 **개발용 상세 내용**을 정리한 문서입니다.
-기술 스택과 버전은 README의 [기술 스택](../README.md#-기술-스택)을 참고해 주세요.
+[README](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/README.md)에서 다루지 않은 **개발용 상세 내용**을 정리한 문서입니다.
+기술 스택과 버전은 README의 [3. 기술 스택]을 참고해 주세요.
 
 ---
 
