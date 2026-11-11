@@ -1,334 +1,186 @@
-# 테마파크 예약 앱 – 리액트 프론트엔드
+<div align="center">
 
-놀이공원 어트랙션 예약 · 최적 루트 추천 서비스의 **화면(프론트엔드)** 입니다.
-**스프링부트 백엔드**(`/api/...`)와 실제로 통신해요.
-백엔드는 **별도 저장소**로 분리되어 있어요. → https://github.com/attraction-final/attraction-reservation.git
+<img src="public/images/logo.svg" alt="놀이동선 로고" width="96" />
 
-- PC 브라우저에서 열면 **휴대폰 화면** 처럼 보여요.
-- 실제 휴대폰으로 열면 틀 없이 **화면을 꽉 채워요**.
-- 로그인은 **JWT**(Access Token + Refresh Token 쿠키), 결제는 **포트원(PortOne) V2** 를 써요.
+# 놀이동선 (Frontend)
 
-| 기술 | 버전 (`package.json` 기준) |
-|---|---|
-| React / React DOM | ^18.3.1 |
-| React Router | ^6.26.2 |
-| Vite | ^5.4.8 |
-| @portone/browser-sdk | ^0.1.13 |
-| qrcode.react | ^4.2.0 (내 입장권 QR 그리기) |
-| @zxing/browser, @zxing/library | ^0.2.1, ^0.23.0 (관리자 입장 처리 QR 카메라 읽기) |
+**놀이공원 어트랙션 예약 · 최적 루트 추천 서비스의 프론트엔드 저장소입니다.**
+
+<!-- TODO: 배포 주소가 정해지면 아래 링크를 바꿔 주세요 -->
+[서비스 바로가기](https://attraction-reservation-frontend.vercel.app/) · [백엔드 저장소](https://github.com/attraction-final/attraction-reservation)
+
+</div>
 
 ---
 
-## 1. 실행하기
+## 📌 목차
 
-준비물
-- [Node.js](https://nodejs.org) 18 이상 (LTS 버전 추천)
-- **스프링부트 백엔드가 `localhost:8080` 에서 켜져 있어야 해요.** (가짜 데이터가 없어서 백엔드 없이는 화면에 데이터가 안 나와요)
+1. [프로젝트 소개](#-프로젝트-소개)
+2. [주요 기능](#-주요-기능)
+3. [기술 스택](#-기술-스택)
+4. [아키텍처](#-아키텍처)
+5. [담당 팀원](#-담당-팀원)
+6. [상세 문서](#-상세-문서)
+7. [서비스 화면](#-서비스-화면)
+8. [실행 방법](#-실행-방법)
+
+---
+
+## 🎢 프로젝트 소개
+
+놀이공원에서는 인기 어트랙션의 긴 대기 시간, 예약 경쟁, 복잡한 이동 동선 때문에 원하는 만큼 즐기지 못하는 경우가 많습니다.
+
+**놀이동선**은 에버랜드를 기반으로, 방문객이 타고 싶은 어트랙션을 고르면 **현재 위치와 이동 거리를 고려한 방문 순서를 추천**하고, **시간대별 슬롯 예약**까지 한 번에 할 수 있도록 만든 서비스입니다.
+
+| 항목 | 내용 |
+|---|---|
+| 프로젝트 기간 | 5주 |
+| 주요 사용자 | 놀이공원 방문객 |
+| 주요 관리자 | 어트랙션 · 운영 일정 · 예약 현황을 관리하는 운영자 |
+| 화면 특징 | PC에서는 휴대폰 틀 안에 보이고, 휴대폰에서는 화면을 꽉 채우는 모바일 웹입니다. |
+
+> 이 저장소는 **화면(프론트엔드)** 만 담고 있습니다. 서버(API)는 [백엔드 저장소](https://github.com/attraction-final/attraction-reservation)에 있습니다.
+
+---
+
+## ✨ 주요 기능
+
+### 방문객
+
+| 기능 | 설명 |
+|---|---|
+| 회원가입 · 로그인 | 이메일 회원가입과 **카카오 · 구글 소셜 로그인**을 지원합니다. 로그인은 JWT(Access Token + Refresh Token 쿠키) 방식입니다. |
+| 입장권 구매 | 방문 날짜와 입장권을 고른 뒤 **포트원(PortOne) V2** 결제창으로 결제합니다. |
+| 내 입장권 · 환불 | 구매한 입장권을 **QR 코드**로 보여 주고, 입장권 한 장 단위로 환불을 요청할 수 있습니다. |
+| 어트랙션 조회 | 운영 중인 어트랙션 목록과 상세 정보를 확인합니다. |
+| 슬롯 예약 | 어트랙션마다 정해진 **시간대(슬롯)** 를 골라 예약합니다. 내 다른 예약과 시간이 겹치면 화면에 표시됩니다. |
+| 루트 추천 | **카카오맵** 위의 어트랙션 핀(또는 목록)에서 5개를 고르면, 현재 위치에서 출발해 **걷는 시간이 가장 짧은 방문 순서**를 추천합니다. 지도에는 내 위치와 어트랙션까지의 예상 도보 시간이 표시됩니다. |
+| 어트랙션 질문 | 어트랙션에 대해 채팅처럼 질문하고 답변을 받습니다. |
+| 내 예약 · 마이페이지 | 예약 내역 확인 · 취소, 닉네임 · 비밀번호 변경, 회원 탈퇴를 할 수 있습니다. |
+
+### 관리자
+
+| 기능 | 설명 |
+|---|---|
+| 어트랙션 · 슬롯 관리 | 어트랙션 등록 · 수정 · 삭제, 운영 상태 변경, 슬롯 추가(15분 간격 일괄 생성) · 시간 · 정원 변경을 합니다. |
+| 예약 관리 | 전체 예약을 조회하고 상태를 변경하거나 취소합니다. |
+| 회원 관리 | 회원 목록을 조회하고 회원 상태를 변경합니다. |
+| 입장권 상품 · 주문 관리 | 입장권 상품을 등록 · 수정하고, 주문 조회와 전체 · 부분 환불을 처리합니다. |
+| 입장 처리 | 휴대폰 카메라로 입장권 **QR 코드를 읽어** 입장 완료로 바꿉니다. |
+
+---
+
+## 🛠 기술 스택
+
+### Frontend (이 저장소)
+
+| 구분 | 기술 | 버전 (`package.json` 기준) |
+|---|---|---|
+| 언어 · 라이브러리 | React / React DOM | ^18.3.1 |
+| 라우팅 | React Router | ^6.26.2 |
+| 빌드 도구 | Vite | ^5.4.8 |
+| 결제 | @portone/browser-sdk (PortOne V2) | ^0.1.13 |
+| QR 생성 | qrcode.react | ^4.2.0 |
+| QR 인식 | @zxing/browser, @zxing/library | ^0.2.1, ^0.23.0 |
+| 지도 | Kakao Maps JavaScript SDK | - (스크립트로 불러옵니다) |
+| 배포 | Vercel | - |
+
+### 외부 연동
+
+| 서비스 | 쓰는 곳 |
+|---|---|
+| Kakao Maps API | 루트 추천 화면의 지도 |
+| 카카오 · 구글 OAuth | 소셜 로그인 (백엔드가 처리합니다) |
+| PortOne V2 | 입장권 결제 · 환불 |
+
+### Backend
+
+Spring Boot 기반이며, 자세한 기술 스택은 [백엔드 저장소 README](https://github.com/attraction-final/attraction-reservation)를 참고해 주세요.
+
+---
+
+## 🏗 아키텍처
+
+<!-- 아키텍처 PNG 이미지가 준비되면 docs/images/architecture.png 로 넣고 아래 줄의 주석을 풀어 주세요. -->
+<!-- ![아키텍처](docs/images/architecture.png) -->
+
+```mermaid
+flowchart LR
+    U["👤 사용자 브라우저<br/>(모바일 웹)"]
+
+    subgraph Vercel
+        FE["React SPA<br/>(Vite 빌드 결과)"]
+    end
+
+    subgraph Backend
+        BE["Spring Boot API<br/>api.xevbn.click"]
+        DB[("MySQL")]
+    end
+
+    KM["Kakao Maps SDK"]
+    OA["카카오 · 구글<br/>OAuth"]
+    PO["PortOne V2"]
+
+    U -->|화면 요청| FE
+    U -->|"/api/* 요청<br/>(Vercel rewrites로 전달)"| BE
+    BE --> DB
+    U -->|지도 불러오기| KM
+    U -->|소셜 로그인 이동| BE
+    BE <--> OA
+    U -->|결제창| PO
+    BE <-->|결제 검증 · 환불| PO
+```
+
+- **화면**은 Vercel에서 내려받습니다.
+- **`/api/*` 요청**은 `vercel.json` 의 `rewrites` 설정으로 백엔드(`https://api.xevbn.click`)에 전달됩니다. 그래서 브라우저 입장에서는 같은 주소로 요청하는 것처럼 보입니다.
+- **소셜 로그인**은 페이지 전체가 이동하는 방식이라, 백엔드 주소(`VITE_OAUTH_BASE_URL`)로 직접 이동합니다.
+- **결제**는 브라우저에서 포트원 결제창을 띄우고, 결제가 끝나면 백엔드가 포트원에 금액을 다시 확인한 뒤 주문을 확정합니다.
+
+---
+
+## 👥 프론트 담당 
+
+<!-- TODO: 각자 맡은 파트와 GitHub 주소를 채워 주세요 -->
+
+ 이름 | 이윤지 
+
+
+---
+
+## 📚 상세 문서
+
+| 문서 | 설명 |
+|---|---|
+| [프론트엔드 개발 가이드](docs/DEVELOPMENT.md) | 폴더 구조, 화면 ↔ 주소, 환경 변수, 데이터 흐름, 호출하는 API 목록, 배포 시 주의할 점을 정리한 문서입니다. |
+| [백엔드 저장소](https://github.com/attraction-final/attraction-reservation) | Spring Boot API 서버 코드입니다. |
+| [API 명세서](https://링크를-적어-주세요) | 인증 · 유저 · 어트랙션 · 슬롯 · 예약 · 주문 · 결제 · 루트 추천 API 명세입니다. |
+| [ERD](https://링크를-적어-주세요) | 전체 테이블 구조입니다. |
+| [기획안](https://링크를-적어-주세요) | 기획 배경, 문제 정의, 비즈니스 규칙입니다. |
+
+---
+
+## 🚀 실행 방법
+
+**준비물**
+- [Node.js](https://nodejs.org) 18 이상 (LTS 버전을 추천합니다)
+- 스프링부트 백엔드가 `localhost:8080` 에서 실행 중이어야 합니다. (가짜 데이터가 없어서 백엔드 없이는 데이터가 보이지 않습니다)
 
 ```bash
-cd attraction-reservation-frontend
-npm install      # 처음 한 번만: 필요한 라이브러리 내려받기
+npm install      # 처음 한 번만: 필요한 라이브러리를 내려받습니다
 npm run dev      # 개발 서버 실행 → http://localhost:5173
 ```
 
-| 명령어 | 하는 일 |
-|---|---|
-| `npm run dev` | 개발 서버 실행 (코드 고치면 바로 반영) |
-| `npm run build` | 배포용 파일을 `dist/` 폴더에 만들기 |
-| `npm run preview` | 만들어진 `dist/` 를 미리 띄워 보기 |
+**카카오맵 키 설정**
 
-### 계정
-- **일반 회원**: 로그인 화면에서 회원가입하면 돼요. (카카오 · 구글 소셜 로그인도 있어요 → 3번 참고)
-- **관리자**: `role = ADMIN` 인 계정으로 로그인한 뒤 `http://localhost:5173/admin` 으로 들어가요.
-  관리자 계정을 만드는 방법은 백엔드 쪽 문서를 확인하세요.
-
----
-
-## 2. 폴더 구조 (어디에 뭐가 있나요?)
-
-```
-attraction-reservation-frontend/
-├─ index.html                 # 앱이 그려지는 빈 HTML (폰트 불러오기)
-├─ vite.config.js             # 개발 서버 설정 (/api → 스프링부트 8080 으로 전달)
-├─ .env.development           # 개발용 설정 (소셜 로그인 백엔드 주소, 카카오맵 키)
-├─ .env.production            # 배포용 설정
-├─ public/images/             # 어트랙션 사진, 로고
-└─ src/
-   ├─ main.jsx                # 시작점
-   ├─ App.jsx                 # 주소 ↔ 화면 연결표 (라우터)
-   ├─ config.js               # 서비스 이름, API·소셜 로그인 주소, 카카오맵 키
-   ├─ styles.css              # 색상·버튼·휴대폰 틀 등 공통 디자인
-   ├─ api/
-   │  ├─ http.js              # ★ 모든 요청이 지나가는 문 (토큰·CSRF·재발급·응답 포장 벗기기·주소 검사)
-   │  ├─ index.js             # ★ 화면에서 쓰는 API 함수 + 백엔드 응답 → 화면 모양 변환(toXxx)
-   │  ├─ labels.js            # 상태 코드 → 한국어/배지 색, 날짜·가격 표시 함수
-   │  ├─ geolocation.js       # 루트 추천 요청 직전에 현재 위치를 "한 번" 받기
-   │  ├─ kakaoMap.js          # 카카오맵 SDK 를 한 번만 불러오기
-   │  └─ ApiError.js
-   ├─ hooks/
-   │  ├─ useApi.js            # 화면이 열릴 때 데이터 불러오기 도우미
-   │  └─ useGeolocation.js    # 내 위치 "계속" 따라가기 (지도 위 점, 가까운 순)
-   ├─ utils/geo.js            # 거리 계산(하버사인), 도보 시간 추정
-   ├─ context/AuthContext.jsx # 로그인 정보 저장소 (로그인·소셜 로그인·로그아웃·탈퇴)
-   ├─ components/
-   │  ├─ DeviceFrame.jsx      # PC 에서 보이는 휴대폰 틀
-   │  ├─ RequireAdmin.jsx     # 관리자 화면 문지기
-   │  ├─ AttractionMap.jsx    # 루트 추천 지도 (카카오맵)
-   │  ├─ SimpleAttractionMap.jsx  # 루트 추천 지도 (카카오 키가 없을 때 쓰는 간이 지도)
-   │  ├─ AttractionPreviewSheet.jsx  # 지도에서 핀을 눌렀을 때 뜨는 미리보기
-   │  ├─ mapPin.js            # 두 지도가 같이 쓰는 핀 모양 규칙
-   │  ├─ PasswordChangeSheet.jsx  # 비밀번호 변경 창
-   │  ├─ WithdrawSheet.jsx    # 회원 탈퇴 창
-   │  ├─ OrderCancelSheet.jsx, ReservationCancelSheet.jsx  # 주문·예약 취소 확인 창
-   │  ├─ ui.jsx               # 탭바, 배지, 헤더 같은 공통 부품
-   │  └─ Icon.jsx
-   └─ pages/                  # 사용자 화면 (admin/ 은 관리자 화면)
-```
-
-### 화면 ↔ 주소
-
-**사용자 화면**
-
-| 화면 | 주소 |
-|---|---|
-| 홈 | `/` |
-| 로그인 · 회원가입 | `/login` |
-| 소셜 로그인 도착 | `/oauth/callback` |
-| 어트랙션 목록 / 상세·슬롯 예약 | `/attractions`, `/attractions/:id` |
-| 어트랙션 질문 (채팅처럼 묻고 답하기) | `/attractions/ask` |
-| 입장권 선택 → 주문·결제 → 결제 완료 | `/tickets` → `/checkout/:orderId` → `/checkout/:orderId/complete` |
-| 루트 추천 조건 → 결과 | `/route` → `/route/result` |
-| 내 예약 / 예약 상세 | `/my/reservations`, `/my/reservations/:id` |
-| 내 입장권 / 마이페이지 | `/my/tickets`, `/my` |
-
-**관리자 화면** (`RequireAdmin` 이 지켜요 → 비로그인은 로그인 화면으로, 일반 회원은 "권한 없음" 안내)
-
-| 화면 | 주소 |
-|---|---|
-| 어트랙션 · 슬롯 관리 (`/admin` 으로 오면 여기로 이동) | `/admin/slots` |
-| 어트랙션 등록 / 수정 | `/admin/attractions/new`, `/admin/attractions/:id/edit` |
-| 예약 관리 | `/admin/reservations` |
-| 회원 관리 | `/admin/members` |
-| 입장권 상품 관리 | `/admin/products` |
-| 주문 · 환불 관리 | `/admin/orders` |
-| 입장 처리 (입장권 코드 → 입장 완료) | `/admin/entry` |
-
-없는 주소로 들어오면 홈(`/`)으로 돌아가요.
-
----
-
-## 3. 환경 설정
-
-### 프론트 `.env`
-
-| 파일 | 값 | 설명 |
-|---|---|---|
-| `.env.development` | `VITE_OAUTH_BASE_URL=http://localhost:8080` | 소셜 로그인 버튼이 이동할 백엔드 주소 |
-| `.env.production` | `VITE_OAUTH_BASE_URL=` (빈 값) | 프론트와 백엔드가 같은 주소로 배포되면 비워 둬요. 다르면 백엔드 주소를 적어요. |
-| 둘 다 | `VITE_KAKAO_MAP_APP_KEY=` | 루트 추천 화면의 카카오맵 JavaScript 키. **비워 두면 간이 지도**가 떠요. (아래 참고) |
-
-### 카카오맵 키 넣기 (선택)
-
-1. [카카오 개발자 콘솔](https://developers.kakao.com) → 내 애플리케이션 → 앱 키 → **JavaScript 키** 복사
-2. 같은 앱의 **[플랫폼 → Web]** 에 사이트 주소 등록 (개발: `http://localhost:5173`, 배포: 배포 주소)
-3. `.env.local` 에 `VITE_KAKAO_MAP_APP_KEY=복사한키` 를 적고 `npm run dev` 를 다시 켜기
-
-이 키는 브라우저에 그대로 보이는 값이라 숨길 수 없어요. 대신 2번의 도메인 등록으로 다른 사이트에서 못 쓰게 막아요.
-
-> 왜 소셜 로그인만 따로 주소를 적나요?
-> 일반 API 는 `fetch` 요청이라 `vite.config.js` 의 proxy 를 타고 8080 으로 가요.
-> 하지만 소셜 로그인은 **브라우저가 페이지를 통째로 이동**하는 방식이라 proxy 를 안 타요. 그래서 백엔드 주소를 직접 적어요.
-
-개인 설정은 `.env.local` 에 적으세요. (`.gitignore` 에 들어 있어서 깃에 안 올라가요)
-
-### 백엔드 쪽에서 프론트와 맞춰야 하는 값
-
-| 백엔드 환경 변수 | 개발 때 예시 값 | 이유 |
-|---|---|---|
-| `OAUTH2_SUCCESS_REDIRECT_URI` | `http://localhost:5173/oauth/callback` | 소셜 로그인 성공 → `?code=일회용코드` 를 붙여서 이 주소로 보내 줘요 |
-| `OAUTH2_FAILURE_REDIRECT_URI` | `http://localhost:5173/oauth/callback` | 소셜 로그인 실패 → `?error=실패코드` 를 붙여서 이 주소로 보내 줘요 |
-| `PORTONE_STORE_ID`, `PORTONE_CHANNEL_KEY` 등 | (포트원 콘솔 값) | 결제창 정보는 프론트에 직접 적지 않고 `GET /api/config/portone` 으로 받아 와요 |
-
----
-
-## 4. 데이터가 흐르는 길 (한 장 요약)
-
-```
-화면(pages/Home.jsx)
-   └─ useApi(() => attractionApi.list('AVAILABLE'))       ← "이 데이터 줘"
-        └─ api/index.js : GET /attractions?size=50&sort=NAME&reservable=true
-             └─ api/http.js : fetch('/api/attractions?...')  → 스프링부트
-                  ← { success, message, data }  → data 만 꺼내서 돌려줌
-        └─ toAttractionSummary() 로 "화면이 쓰는 모양"으로 바꿈
-```
-
-화면 코드는 백엔드 응답 모양을 몰라요. 백엔드 응답이 바뀌면 **`api/index.js` 의 toXxx 함수만** 고치면 돼요.
-
-### `http.js` 가 대신 해 주는 일
-
-1. **응답 포장 벗기기**: 서버는 `{ success, message, data }` 로 보내요 → `data` 만 돌려줘요.
-2. **출입증 붙이기**: 로그인 때 받은 Access Token 을 `Authorization: Bearer 토큰` 으로 붙여요.
-    - Access Token 은 **메모리(변수)** 에만 둬요. 새로고침하면 사라지지만, 앱이 켜질 때 Refresh Token 쿠키로 다시 받아요.
-3. **CSRF 도장**: `/api/auth/**` 와 `/api/users/signup` 에 GET 이 아닌 요청을 보낼 때는
-   먼저 `GET /api/auth/csrf` 로 도장을 받아 머리글에 같이 보내요.
-   - 머리글 이름은 서버 응답 값이 아니라 고정값 `X-XSRF-TOKEN` 을 써요. (백엔드 `CookieCsrfTokenRepository` 기본값)
-4. **401 이 오면 한 번만 재시도**: `POST /api/auth/refresh` 로 새 출입증을 받고 같은 요청을 다시 보내요.
-5. **에러 문장**: 서버가 준 `message`(입력값 오류면 `data` 의 첫 번째 이유)를 화면에 그대로 보여 줘요.
-6. **요청 주소 검사**: 주소에 `..` 이나 `//` 가 섞이면 요청을 보내지 않아요. (엉뚱한 API 를 부르는 공격 방지)
-
-> ⚠️ **API 함수를 새로 만들 때 규칙**
-> 주소에 값을 넣을 때는 꼭 감싸 주세요. 그냥 `${id}` 로 넣으면 SonarCloud 보안 경고가 나요.
-> - 숫자 id (어트랙션·예약·주문·슬롯·회원·상품): `` http.get(`/attractions/${toId(id)}`) ``
-> - 글자가 섞인 값 (결제 id `pgId`): `` http.post(`/payments/${seg(pgId)}/confirm`) ``
-> - 서버 응답 안의 id 로 **다시 요청하지 말고**, 이미 받은 목록에서 찾아 쓰는 걸 먼저 생각해 주세요.
-
-### 소셜 로그인 흐름 (카카오 · 구글)
-
-```
-[카카오로 시작] 클릭
-  → (백엔드) /oauth2/authorization/kakao
-  → 카카오 로그인 → 백엔드가 회원 확인/가입
-  → /oauth/callback?code=일회용코드
-  → POST /api/auth/oauth2/exchange { code } → Access Token 받기 → 내 정보 불러오기
-```
-버튼 목록은 `pages/Login.jsx` 에 있어요. id 는 백엔드 `application-oauth.yml` 의 registrationId 와 같아야 해요.
-
-### 결제 흐름 (포트원 V2)
-
-```
-입장권 선택 → POST /api/orders              (주문 생성, 응답에 pgId)
-  → GET /api/config/portone                 (storeId, channelKey 받기)
-  → PortOne.requestPayment({ paymentId: pgId, ... })   (결제창)
-  → POST /api/payments/{pgId}/confirm       (서버가 포트원에 금액을 다시 확인하고 주문 확정)
-```
-- PC 는 보통 팝업 결제라 `Checkout.jsx` 에서 바로 승인 요청까지 해요.
-- 모바일은 결제사 페이지로 이동했다가 `/checkout/:orderId/complete` 로 돌아와서 `PaymentComplete.jsx` 가 승인 요청을 해요.
-
-### 루트 추천 흐름 (지도 + 내 위치)
-
-```
-/route 화면
-  → GET /api/route-recommendations/attractions   (고를 수 있는 어트랙션 + 좌표)
-  → 지도(핀) 또는 목록에서 정확히 5개 고르기
-  → [루트 추천받기] → 브라우저 위치 받기 → POST /api/route-recommendations
-  → /route/result 화면
-```
-- **지도는 두 가지예요.** 카카오맵 키가 있으면 `AttractionMap`(카카오맵), 없으면 `SimpleAttractionMap`(백엔드 좌표만으로 그린 간이 지도)이 떠요. 바꾸는 곳은 `RouteSetup.jsx` 의 `MapView` 한 줄이에요.
-- **핀을 누르는 건 미리보기**이고, 미리보기 카드의 "루트에 넣기" 버튼을 눌러야 골라져요. (지도는 실수로 누르기 쉬워서 나눴어요)
-- **위치 권한은 버튼을 눌렀을 때만** 물어봐요. 거부해도 지도·목록에서 고를 수 있어요. 단, 추천 요청은 위치가 있어야 보내져요.
-- 위치는 **HTTPS(또는 localhost)** 에서만 받을 수 있어요.
-- 지도에 핀이 하나도 안 보이면 백엔드 DB 의 `attraction_locations` 가 비어 있는 거예요. 백엔드 `docs/sql/kan-136-route-travel-data.sql` 을 실행해야 해요. (운영 중인 어트랙션만 보여요)
-
----
-
-## 5. 프론트가 부르는 API 목록
-
-> 모든 주소 앞에 `/api` 가 붙어요.
-> 정확한 요청·응답 필드는 **백엔드 API 명세**와 `src/api/index.js` 의 주석 · toXxx 함수를 기준으로 보세요.
-
-### 인증 · 회원
-| 메서드 | 주소 | 쓰는 곳 |
-|---|---|---|
-| GET | `/auth/csrf` | CSRF 도장 받기 (`http.js` 가 자동으로) |
-| POST | `/auth/login` | 로그인 |
-| POST | `/auth/refresh` | 출입증 재발급 (`http.js` 가 자동으로) |
-| POST | `/auth/logout` | 로그아웃 |
-| POST | `/auth/oauth2/exchange` | 소셜 로그인 일회용 코드 → 출입증 |
-| POST | `/users/signup` | 회원가입 (가입 후 바로 로그인) |
-| GET / PATCH / DELETE | `/users/me` | 내 정보 / 닉네임 수정 / 탈퇴 |
-| PATCH | `/users/me/password` | 비밀번호 변경 |
-
-### 어트랙션 · 슬롯 · 예약 · 루트
-| 메서드 | 주소 | 쓰는 곳 |
-|---|---|---|
-| GET | `/attractions` | 어트랙션 목록 (홈의 운영 현황도 이걸로 계산) |
-| GET | `/attractions/{id}` | 어트랙션 상세 |
-| GET | `/attractions/{id}/slots?date=` | 슬롯 목록 (로그인 필요) |
-| POST | `/attractions/questions` | 어트랙션 질문 `{question}` (로그인 필요, 200자까지) |
-| GET | `/reservations/me` | 내 예약 |
-| GET | `/reservations/{id}` | 내 예약 상세 |
-| POST | `/reservations` | 예약하기 `{ticketId, slotId}` |
-| PATCH | `/reservations/{id}/cancel` | 예약 취소 |
-| GET | `/route-recommendations/attractions` | 추천에 고를 수 있는 어트랙션 + 좌표 `{attractionId, attractionName, latitude, longitude}` |
-| POST | `/route-recommendations` | 루트 추천 `{latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed, timestamp, attractionIds}` (정확히 5개) |
-
-### 입장권 · 주문 · 결제
-| 메서드 | 주소 | 쓰는 곳 |
-|---|---|---|
-| GET | `/ticket-products` | 입장권 상품 목록 |
-| GET | `/tickets/me` | 내 입장권 |
-| POST | `/orders` | 주문 생성 `{visitDate, items: [{ticketProductId, quantity}]}` |
-| GET | `/orders/{id}` | 주문 상세 (결제 화면) |
-| GET | `/orders/me` | 내 결제 내역 |
-| GET | `/config/portone` | 포트원 상점 정보 |
-| POST | `/payments/{pgId}/confirm` | 결제 승인 |
-| POST | `/payments/{pgId}/refunds/partial` | 내 입장권 한 장 환불 |
-
-### 관리자 (ADMIN 만)
-| 메서드 | 주소 | 쓰는 곳 |
-|---|---|---|
-| POST / PATCH / DELETE | `/admin/attractions`, `/admin/attractions/{id}` | 어트랙션 등록 / 수정 / 삭제 |
-| PATCH | `/admin/attractions/{id}/status` | 어트랙션 운영 상태 변경 |
-| GET / POST | `/admin/attractions/{id}/slots` | 슬롯 조회 / 추가 |
-| PATCH | `/admin/slots/{id}/status`, `/time`, `/capacity` | 슬롯 상태 / 시간 / 정원 변경 |
-| DELETE | `/admin/slots/{id}` | 슬롯 삭제 |
-| GET | `/admin/reservations` | 예약 목록 |
-| PATCH | `/admin/reservations/{id}/status`, `/cancel` | 예약 상태 변경 / 취소 |
-| GET | `/admin/users` | 회원 목록 |
-| PATCH | `/admin/users/{id}/status` | 회원 상태 변경 |
-| POST / PUT / DELETE | `/admin/ticket-products`, `/admin/ticket-products/{id}` | 입장권 상품 등록 / 수정 / 삭제 |
-| GET | `/admin/orders`, `/admin/orders/{id}` | 주문 목록 / 상세 |
-| POST | `/admin/orders/{id}/cancel` | 결제 대기 주문 취소 |
-| POST | `/admin/payments/{pgId}/refunds`, `/refunds/partial` | 전체 환불 / 부분 환불 |
-| POST | `/admin/tickets/entry` | 입장 처리 `{ticketCode}` |
-
-### 백엔드 이름 ↔ 화면 이름 (헷갈리기 쉬운 것)
-
-| 구분 | 백엔드 | 화면 (`labels.js`) |
-|---|---|---|
-| 입장권 종류 | `ALL_DAY` | `FULL_DAY` |
-| 예약 상태 | `COMPLETED` / `CANCELLED` | `USED` / `CANCELED` |
-
-바꾸는 표는 `api/index.js` 의 `TICKET_TYPE_MAP`, `RESERVATION_STATUS_MAP` 에 있어요.
-
----
-
-## 6. 배포할 때
+루트 추천 지도를 보려면 프로젝트 최상위에 `.env.local` 파일을 만들고 아래 한 줄을 적습니다.
 
 ```bash
-npm run build      # dist/ 폴더가 만들어져요
+VITE_KAKAO_MAP_APP_KEY=카카오_JavaScript_키
 ```
 
-> ✏️ **팀에서 정한 배포 방법을 여기에 적어 주세요.** (예: Vercel, 배포 주소, 환경 변수 넣는 곳)
+- 키는 [카카오 개발자 콘솔](https://developers.kakao.com) → 내 애플리케이션 → 앱 키 → **JavaScript 키**입니다.
+- 같은 앱의 **[플랫폼 → Web]** 에 `http://localhost:5173` (배포 시에는 배포 주소)를 등록해야 지도가 열립니다.
+- `.env.local` 은 `.gitignore` 에 포함되어 있어 깃에 올라가지 않습니다.
+- 키를 비워 두면 카카오맵 대신 **간이 지도**(좌표대로 핀만 찍은 지도)가 표시됩니다.
 
-어디에 배포하든 아래 세 가지는 꼭 맞춰야 해요.
-
-1. **`/api` 요청이 백엔드로 가야 해요.** `vite.config.js` 의 proxy 는 `npm run dev` 에서만 동작해요. 배포 환경에서는 `/api/*` 를 백엔드 주소로 넘겨 주는 설정(예: Vercel `rewrites`, Nginx `proxy_pass`)이 따로 필요해요.
-2. **새로고침 404 막기**: `/my/tickets` 같은 주소에서 새로고침해도 `index.html` 을 돌려주도록 설정해야 해요. (SPA 대체 경로)
-3. **환경 변수**: 배포 서비스에도 `VITE_OAUTH_BASE_URL`, `VITE_KAKAO_MAP_APP_KEY` 를 넣어야 해요. 빌드할 때 코드에 박히는 값이라, 바꾸면 **다시 빌드**해야 반영돼요.
-
-> ⚠️ **파일 이름 대소문자 주의**: Windows 에서는 `useGeolocation.js` 를 `Usegeolocation.js` 로 저장해도 동작하지만, 배포 서버(리눅스)에서는 "파일을 찾을 수 없다"로 빌드가 실패해요. `import` 경로와 실제 파일 이름의 대소문자를 똑같이 맞춰 주세요.
-
----
-
-## 7. 알아 두면 좋은 것 / 아직 남은 일
-
-**백엔드에 정보·API 가 없어서 프론트가 대신 처리하는 것**
-- **어트랙션 사진**: 백엔드에 사진 정보가 없어서, 이름이 같으면 `public/images/` 사진을 쓰고 없으면 공원 사진을 써요. (`IMAGE_BY_NAME`)
-- **키 제한**: 백엔드에 정보가 없어서 "키 제한" 필터는 지금 항상 빈 목록이에요.
-- **홈 운영 현황**: 전용 API 가 없어서 어트랙션 목록으로 계산해요. 개장 10:00 / 폐장 22:00 은 프론트에 적혀 있어요.
-- **입장권 판매 날짜**: 전용 API 가 없어서 "오늘부터 7일"을 프론트에서 만들어요.
-- **슬롯의 "내 예약 / 시간 겹침" 표시**: 내 예약 목록과 비교해서 프론트가 붙여요.
-- **슬롯 일괄 생성**: 일괄 생성 API 가 없어서 10:00~21:30 을 30분 간격으로 슬롯 추가 API 를 한 번씩 불러요. (정원 20명 고정)
-- **관리자 예약·회원 검색**: 백엔드에 글자 검색이 없어서 최대 100건을 받아 프론트에서 걸러요. 데이터가 많아지면 백엔드 검색 API 가 필요해요.
-- **관리자 회원 목록의 입장권 수 / 예약 수**: 응답에 없어서 비어 있어요.
-
-**그 밖에**
-- **서비스 이름**: `src/config.js` 의 `SERVICE_NAME` 한 줄로 홈·관리자 화면 이름이 모두 바뀌어요. (지금: 놀이동선)
-- **결제 수단**: 지금은 카드만 열려 있어요. 간편결제·계좌이체는 `labels.js` 의 `PAYMENT_METHODS` 에 주석으로 막혀 있어요. (테스트 채널이 지원하는지 먼저 확인)
-- **입장 QR**: 내 입장권 화면이 입장권 `code` 로 QR 을 그리고(`qrcode.react`), 관리자 입장 처리 화면이 카메라로 읽어요(`@zxing/browser`). 카메라도 **HTTPS(또는 localhost)** 에서만 열려요.
-- **도보 시간**: 지도·목록의 "걸어서 약 N분"은 직선거리 × 1.68 ÷ 52.8m/분으로 계산한 **추정**이에요. 백엔드 `application.yaml` 의 `route-recommendation` 값과 맞춰 뒀으니, 백엔드 값을 바꾸면 `utils/geo.js` 도 같이 바꿔 주세요.
-- **관리자 화면 보호**: `RequireAdmin` 은 "보기 좋게" 막는 것이고, 진짜 보안은 백엔드(`/api/admin/**` → ADMIN 권한)가 해요.
-- **사진 권한**: `public/images/` 의 어트랙션 사진은 전달받은 이미지예요. 공개 배포(포트폴리오 등) 전에 사용 권한을 꼭 확인하세요.
-- **폰트**: 구글 폰트(Jua, Noto Sans KR)를 인터넷에서 불러와요. 인터넷이 안 되면 기본 글꼴로 보여요.
-- **카카오맵 키**: 키가 없으면 간이 지도(실제 지도 그림 없이 좌표 비율대로 핀만 찍은 지도)가 떠요. 임시용이에요.
+환경 변수 전체 목록과 배포 설정은 [프론트엔드 개발 가이드](docs/DEVELOPMENT.md)를 참고해 주세요.
