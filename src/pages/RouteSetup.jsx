@@ -5,7 +5,7 @@ import AttractionMap from '../components/AttractionMap.jsx';
 import SimpleAttractionMap from '../components/SimpleAttractionMap.jsx';
 import AttractionPreviewSheet from '../components/AttractionPreviewSheet.jsx';
 import { BackHeader, Empty, Loading } from '../components/ui.jsx';
-import { KAKAO_MAP_APP_KEY } from '../config.js';
+import { KAKAO_MAP_APP_KEY, TEST_FIXED_LOCATION } from '../config.js';
 import { useApi } from '../hooks/useApi.js';
 import { GEO_STATUS, useGeolocation } from '../hooks/useGeolocation.js';
 import { ROUTE_CLOSE_TIME, ROUTE_MAX_PICK, ROUTE_MIN_PICK, routeApi } from '../api/index.js';
@@ -91,6 +91,12 @@ export default function RouteSetup() {
             지금 위치에서 출발해 폐장({ROUTE_CLOSE_TIME})까지 탈 수 있는 순서를 추천해요. 위치는 내 위치 보기와 이번 추천에만 쓰고 저장하지 않아요.
           </span>
         </div>
+        {TEST_FIXED_LOCATION && (
+            // 테스트 주소(Preview)에서만 보여요. 실제 위치 대신 고정 좌표로 추천한다는 것을 알려 줘요.
+            <div role="status" style={{ background: '#FFF8E1', borderRadius: 14, padding: '10px 12px', fontSize: 12, lineHeight: 1.5, color: '#5A3B00', flexShrink: 0 }}>
+              테스트 모드: 실제 위치 대신 공원 안 고정 위치({TEST_FIXED_LOCATION.latitude}, {TEST_FIXED_LOCATION.longitude})에서 출발한다고 보고 추천해요.
+            </div>
+        )}
 
         <TicketBox tickets={tickets} ticketId={ticketId} onChange={setTicketId} />
 

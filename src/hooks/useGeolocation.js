@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { haversine } from '../utils/geo.js';
+import { TEST_FIXED_LOCATION } from '../config.js';
 
 /**
  * 내 위치를 "계속" 따라가는 커스텀 훅이에요. (실시간 위치)
@@ -51,6 +52,18 @@ export function useGeolocation({ minDistanceM = 5, maxAccuracyM = 100 } = {}) {
 
     // 실제로 위치 추적을 시작하는 함수
     const begin = useCallback(() => {
+        // 테스트용 고정 위치가 켜져 있으면 GPS를 켜지 않고 그 좌표를 내 위치로 보여 줘요.
+        if (TEST_FIXED_LOCATION) {
+            const fixed = {
+                lat: TEST_FIXED_LOCATION.latitude,
+                lng: TEST_FIXED_LOCATION.longitude,
+                accuracy: TEST_FIXED_LOCATION.accuracy,
+                timestamp: Date.now() };
+            last.current = fixed;
+            setPosition(fixed);
+            setStatus(GEO_STATUS.TRACKING);
+            return;
+        }
         // HTTPS(또는 localhost)가 아니거나 브라우저가 지원하지 않으면 위치를 받을 수 없어요.
         if (!window.isSecureContext || !('geolocation' in navigator)) {
             setStatus(GEO_STATUS.UNAVAILABLE);
@@ -103,6 +116,11 @@ export function useGeolocation({ minDistanceM = 5, maxAccuracyM = 100 } = {}) {
     // granted 면 팝업 없이 바로 추적해도 되고, denied 면 설정 안내를 먼저 보여 줄 수 있어요.
     // 일부 브라우저는 이 기능이 없어서 실패하면 'unknown' 으로 둬요.
     useEffect(() => {
+        // 테스트용 고정 위치는 권한이 필요 없음 "허용됨"으로 두면 화면이 바로 내 위치를 킨다.
+        if (TEST_FIXED_LOCATION) {
+            setPermission('granted');
+            return undefined;
+        }
         let alive = true;
         let permissionStatus = null;
         const onChange = () => alive && setPermission(permissionStatus.state);

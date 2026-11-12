@@ -10,6 +10,9 @@
 // - 실패하면 Error 를 던지고, error.message 에 사용자에게 보여 줄 안내 문구가 들어 있어요.
 // - HTTPS 또는 localhost 에서만 동작해요. (그 밖에서는 브라우저가 위치를 주지 않아요)
 
+import { TEST_FIXED_LOCATION } from '../config.js'; // - 테스트용 고정 위치(config.js 의 TEST_FIXED_LOCATION)가
+// 켜져 있으면 브라우저에 묻지 않고 그 좌표를 바로 돌려준다.
+
 const OPTIONS = {
     enableHighAccuracy: true, // 공원 안 어트랙션 사이 거리는 수백 m라서 정확한 위치가 필요해요
     timeout: 10000,           // 10초 안에 못 받으면 포기해요
@@ -24,6 +27,16 @@ const MESSAGES = {
 };
 
 export function getCurrentLocation() {
+    if (TEST_FIXED_LOCATION) {
+        return Promise.resolve({
+            ...TEST_FIXED_LOCATION,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+            timestamp: Date.now(),
+        });
+    }
     return new Promise((resolve, reject) => {
         if (!('geolocation' in navigator)) {
             reject(new Error('이 브라우저는 현재 위치 기능을 지원하지 않아요. 다른 브라우저에서 시도해 주세요.'));
