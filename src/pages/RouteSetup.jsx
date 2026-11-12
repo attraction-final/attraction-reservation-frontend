@@ -8,19 +8,21 @@ import { BackHeader, Empty, Loading } from '../components/ui.jsx';
 import { KAKAO_MAP_APP_KEY } from '../config.js';
 import { useApi } from '../hooks/useApi.js';
 import { GEO_STATUS, useGeolocation } from '../hooks/useGeolocation.js';
-import { ROUTE_PICK_COUNT, routeApi } from '../api/index.js';
+import { ROUTE_CLOSE_TIME, ROUTE_MAX_PICK, ROUTE_MIN_PICK, routeApi } from '../api/index.js';
 import { getCurrentLocation } from '../api/geolocation.js';
 import { estimateWalkMinutes, formatDistance, hasLatLng, haversine } from '../utils/geo.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 /*
  * 루트 추천 화면
- * 어트랙션 5개를 고르면 지금 위치에서 출발해 걷는 시간이 가장 짧은 방문 순서를 추천받아요.
+ * 입장 처리된 오늘 입장권으로, 어트랙션을 1~5개 고르면 "지금 위치 + 지금 시각"에서 출발해
+ * 폐장(22:00) 전까지 탈 수 있는 방문 순서와 슬롯을 추천받아요. (예약은 결과 화면에서 한 번에 해요)
  * 어트랙션은 "지도"에서 핀을 눌러 고르거나, "목록"에서 체크해서 골라요. 두 화면은 같은 picked 를 같이 써요.
  *
  * 한 함수가 너무 많은 일을 하면 읽기 어려워서, 역할별로 나눴어요.
  *  - RouteSetup        : 상태(기억)를 들고, 아래 부품들을 조립해요
  *  - useRouteSubmit    : "루트 추천받기" 버튼을 눌렀을 때의 일 (위치 받기 → 서버 요청 → 결과 화면)
+ *  - TicketBox         : 추천에 쓸 입장권 (IN_USE + 오늘) 보여 주기·고르기
  *  - useAutoStartGeo   : 이미 위치 권한을 허용한 사람이면 바로 내 위치 켜기
  *  - MapPicker / RideList / PickedChips / SubmitBar : 화면 조각
  */
@@ -36,6 +38,12 @@ const MapView = USE_KAKAO ? AttractionMap : SimpleAttractionMap;
 export default function RouteSetup() {
   const { user } = useAuth();
   const rides = useApi(() => (user ? routeApi.recommendableAttractions() : Promise.resolve([])), [user]);
+  // 추천에 쓸 수 있는 입장권: 입장 처리됨(IN_USE) + 방문일 오늘
+  const tickets = useApi(() => (user ? routeApi.todayTickets() : Promise.resolve([])), [user]);
+  const [ticketId, setTicketId] = useState('');
+  useEffect(() => {
+    if (tickets.data?.length) setTicketId((prev) => prev || tickets.data[0].id);
+  }, [tickets.data]);
 
   const [picked, setPicked] = useState([]);          // 루트에 넣기로 "확정"한 어트랙션 id (고른 순서대로)
   const [selectedId, setSelectedId] = useState(null); // 지도에서 "미리보기" 중인 어트랙션 id (확정 아님)
@@ -47,7 +55,7 @@ export default function RouteSetup() {
   const geo = useGeolocation();
   useAutoStartGeo(geo);
 
-  const { submit, error, setError, submitting, locating, errorRef } = useRouteSubmit(picked);
+  const { submit, error, setError, submitting, locating, errorRef } = useRouteSubmit(picked, ticketId);
   const list = useSortedRides(rides.data, geo.position, sortNear);
 
   if (!user) {
@@ -58,7 +66,7 @@ export default function RouteSetup() {
       </div>
     );
   }
-  if (rides.loading) return <div className="screen"><BackHeader title="루트 추천" to="/" /><Loading /></div>;
+  if (rides.loading || tickets.loading) return <div className="screen"><BackHeader title="루트 추천" to="/" /><Loading /></div>;
 
   // 고르기·빼기. 규칙은 togglePick(아래)에 있고, 여기서는 결과를 상태에 넣기만 해요.
   const toggle = (id) => {
@@ -76,20 +84,22 @@ export default function RouteSetup() {
         <div className="row gap-12" style={{ background: 'var(--pink-soft)', borderRadius: 18, padding: '10px 14px', flexShrink: 0 }}>
           <span className="icon-circle" style={{ width: 36, height: 36, borderRadius: 12, background: '#fff', color: 'var(--pink-dark)' }}><Icon name="map" size={20} /></span>
           <span className="small" style={{ color: '#8C2049', lineHeight: 1.5 }}>
-            지금 위치에서 출발하는 순서를 추천해요. 위치는 내 위치 보기와 이번 추천에만 쓰고 저장하지 않아요.
+            지금 위치에서 출발해 폐장({ROUTE_CLOSE_TIME})까지 탈 수 있는 순서를 추천해요. 위치는 내 위치 보기와 이번 추천에만 쓰고 저장하지 않아요.
           </span>
         </div>
+
+        <TicketBox tickets={tickets} ticketId={ticketId} onChange={setTicketId} />
 
         <ViewTabs view={view} onMap={() => setView('map')} onList={showList} />
 
         <div className="stack gap-8" style={{ flexShrink: 0 }}>
           <div className="row between" style={{ alignItems: 'baseline' }}>
             <h2 className="display" style={{ fontSize: 18 }}>방문할 어트랙션</h2>
-            <span className="small bold" style={{ color: 'var(--blue-ink)' }}>{picked.length}/{ROUTE_PICK_COUNT}개 선택됨</span>
+            <span className="small bold" style={{ color: 'var(--blue-ink)' }}>{picked.length}/{ROUTE_MAX_PICK}개 선택됨 ({ROUTE_MIN_PICK}~{ROUTE_MAX_PICK}개)</span>
           </div>
           {rides.error && <span className="error-text" role="alert">{rides.error.message}</span>}
-          {!rides.error && list.length < ROUTE_PICK_COUNT && (
-            <span className="small muted">지금은 추천할 수 있는 어트랙션이 {ROUTE_PICK_COUNT}개보다 적어요. 잠시 후 다시 확인해 주세요.</span>
+          {!rides.error && list.length === 0 && (
+            <span className="small muted">지금은 추천할 수 있는 어트랙션이 없어요. 잠시 후 다시 확인해 주세요.</span>
           )}
           <PickedChips picked={picked} list={list} onRemove={toggle} />
         </div>
@@ -104,11 +114,14 @@ export default function RouteSetup() {
 
         {error && (
           // 목록 아래에 있어서 실패하면 이 영역이 보이도록 스크롤해요.
-          <span ref={errorRef} className="error-text" role="alert" style={{ flexShrink: 0 }}>{error}</span>
+          <div ref={errorRef} className="stack gap-8" style={{ flexShrink: 0 }}>
+            <span className="error-text" role="alert">{error.message}</span>
+            <ErrorAction action={error.action} onRetry={submit} />
+          </div>
         )}
       </div>
 
-      <SubmitBar onSubmit={submit} disabled={submitting || picked.length !== ROUTE_PICK_COUNT}
+      <SubmitBar onSubmit={submit} disabled={submitting || !ticketId || picked.length < ROUTE_MIN_PICK}
         submitting={submitting} locating={locating} />
     </div>
   );
@@ -119,8 +132,8 @@ export default function RouteSetup() {
 // 고르기·빼기 규칙. 화면 상태를 직접 바꾸지 않고 "다음 상태"만 계산해서 돌려줘요. (테스트하기 쉬워요)
 function togglePick(picked, id) {
   if (picked.includes(id)) return { next: picked.filter((x) => x !== id), error: '' };
-  if (picked.length >= ROUTE_PICK_COUNT) {
-    return { next: picked, error: `어트랙션은 ${ROUTE_PICK_COUNT}개까지 고를 수 있어요.` };
+  if (picked.length >= ROUTE_MAX_PICK) {
+    return { next: picked, error: `어트랙션은 ${ROUTE_MAX_PICK}개까지 고를 수 있어요.` };
   }
   return { next: [...picked, id], error: '' };
 }
@@ -151,13 +164,29 @@ function useSortedRides(rides, position, sortNear) {
   }, [rides, position, sortNear]);
 }
 
+// 서버 오류 → 안내 문장 옆에 붙일 "다음 행동" 버튼 종류
+// 서버 실패 응답에는 오류 코드가 없어서(message 만 있어요), HTTP 상태 + 메시지 일부로 구분해요.
+// ⚠️ 서버 문구가 바뀌면 여기도 같이 바꿔야 해요.
+function errorActionOf(e) {
+  if (e.status === 409 && e.message?.includes('이용 예정인 어트랙션 예약')) return 'MY_RESERVATIONS';
+  if (e.status === 409) return 'MY_TICKETS';                      // 입장 처리 전(UNUSED)·사용 완료·환불된 입장권
+  if (e.status === 400 && e.message?.includes('정확도')) return 'RETRY_LOCATION';
+  if (e.status === 404) return 'RELOAD';                           // 그사이 삭제된 어트랙션 등
+  return null;
+}
+
 // "루트 추천받기" 버튼을 눌렀을 때 하는 일
-function useRouteSubmit(picked) {
+function useRouteSubmit(picked, ticketId) {
   const navigate = useNavigate();
-  const [error, setError] = useState('');
+  const [error, setErrorState] = useState(null);       // { message, action } | null
   const [submitting, setSubmitting] = useState(false);
-  const [locating, setLocating] = useState(false);   // 추천 요청 직전에 현재 위치를 받는 중
+  const [locating, setLocating] = useState(false);     // 추천 요청 직전에 현재 위치를 받는 중
   const errorRef = useRef(null);
+
+  // 화면 쪽(togglePick 등)에서는 문장만 넘기면 돼요. 빈 문장이면 오류를 지워요.
+  const setError = useCallback((message, action = null) => {
+    setErrorState(message ? { message, action } : null);
+  }, []);
 
   useEffect(() => {
     if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -165,27 +194,30 @@ function useRouteSubmit(picked) {
 
   const submit = useCallback(async () => {
     setError('');
-    if (picked.length !== ROUTE_PICK_COUNT) {
-      setError(`어트랙션을 정확히 ${ROUTE_PICK_COUNT}개 골라 주세요.`);
+    if (!ticketId) {
+      setError('입장 처리된 오늘 입장권이 있어야 루트를 추천받을 수 있어요.', 'MY_TICKETS');
+      return;
+    }
+    if (picked.length < ROUTE_MIN_PICK || picked.length > ROUTE_MAX_PICK) {
+      setError(`어트랙션을 ${ROUTE_MIN_PICK}~${ROUTE_MAX_PICK}개 골라 주세요.`);
       return;
     }
     setSubmitting(true);
     try {
       // 버튼을 누른 이때 위치를 받아요. (화면에 들어오자마자 권한 팝업이 뜨지 않게)
-      // 서버가 받는 값(고도·속도·측정 시각 등)을 모두 담기 위해 지도용 위치 대신 getCurrentLocation() 을 써요.
+      // 위치를 못 받으면 여기서 멈춰서 서버 요청은 보내지 않아요.
       setLocating(true);
       const position = await getCurrentLocation().finally(() => setLocating(false));
-      const result = await routeApi.recommend({ position, attractionIds: picked });
-      // 결과 화면으로 이동하면서 추천 결과를 같이 넘겨요.
+      const result = await routeApi.recommend({ ticketId, position, attractionIds: picked });
+      // FULL / PARTIAL / NONE 모두 "성공"이에요. 결과 화면이 resultType 으로 나눠서 보여 줘요.
       navigate('/route/result', { state: { result } });
     } catch (e) {
-      // 위치를 못 받음(권한 거부 등)·위치 정확도 낮음·공원에서 너무 멂·이동 정보 없음·그사이 운영 중단 등
-      // getCurrentLocation 과 서버가 만든 안내 문장을 그대로 보여 줘요.
-      setError(e.message);
+      // 위치 실패(권한 거부 등)는 getCurrentLocation 이, 서버 거절은 서버가 만든 안내 문장을 그대로 보여 줘요.
+      setError(e.message, errorActionOf(e));
     } finally {
       setSubmitting(false);
     }
-  }, [picked, navigate]);
+  }, [picked, ticketId, navigate, setError]);
 
   return { submit, error, setError, submitting, locating, errorRef };
 }
@@ -297,8 +329,8 @@ function MapPicker({ list, picked, selectedId, onSelect, geo, follow, onFollowCh
         <AttractionPreviewSheet
           attraction={selected}
           pickOrder={picked.indexOf(selected.id) + 1}
-          full={picked.length >= ROUTE_PICK_COUNT}
-          maxCount={ROUTE_PICK_COUNT}
+          full={picked.length >= ROUTE_MAX_PICK}
+          maxCount={ROUTE_MAX_PICK}
           myPosition={geo.position}
           onToggle={() => { onToggle(selected.id); onSelect(null); }}
           onClose={() => onSelect(null)}
@@ -376,4 +408,56 @@ function GeoNotice({ status, onRetry }) {
       )}
     </output>
   );
+}
+
+// 추천에 쓸 입장권. 없으면 안내, 1장이면 이름만, 여러 장이면 고르게 해요.
+function TicketBox({ tickets, ticketId, onChange }) {
+  if (tickets.error) return <span className="error-text" role="alert">{tickets.error.message}</span>;
+  const list = tickets.data || [];
+  if (list.length === 0) {
+    return (
+      <div style={{ background: '#FFF8E1', borderRadius: 14, padding: '10px 12px', fontSize: 12, lineHeight: 1.5, color: '#5A3B00', flexShrink: 0 }}>
+        입장 처리된 오늘 입장권이 있어야 루트를 추천받을 수 있어요. 입장 게이트에서 입장권을 확인받은 뒤 이용해 주세요.{' '}
+        <Link to="/my/tickets">내 입장권 보기</Link>
+      </div>
+    );
+  }
+  if (list.length === 1) {
+    return (
+      <span className="row gap-4 small" style={{ color: 'var(--blue-ink)', flexShrink: 0 }}>
+        <Icon name="ticket" size={14} strokeWidth={2} />
+        <span className="bold">{list[0].name}</span>
+        <span className="muted">· 오늘 입장 완료</span>
+      </span>
+    );
+  }
+  return (
+    <div className="stack gap-4" style={{ flexShrink: 0 }}>
+      <label htmlFor="route-ticket" className="small bold">사용할 입장권</label>
+      <select id="route-ticket" className="input" value={ticketId} onChange={(e) => onChange(Number(e.target.value))} style={{ fontSize: 14 }}>
+        {list.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.code})</option>)}
+      </select>
+    </div>
+  );
+}
+
+// 오류 문장 아래에 붙는 "다음 행동" 버튼
+function ErrorAction({ action, onRetry }) {
+  switch (action) {
+    case 'MY_RESERVATIONS':
+      return <Link to="/my/reservations" className="btn btn-outline btn-sm">내 예약 보기</Link>;
+    case 'MY_TICKETS':
+      return <Link to="/my/tickets" className="btn btn-outline btn-sm">내 입장권 보기</Link>;
+    case 'RETRY_LOCATION':
+      return (
+        <>
+          <span className="small muted">건물 밖이나 하늘이 트인 곳에서 다시 측정하면 정확도가 좋아져요.</span>
+          <button type="button" className="btn btn-outline btn-sm" onClick={onRetry}>위치 다시 측정하기</button>
+        </>
+      );
+    case 'RELOAD':
+      return <button type="button" className="btn btn-outline btn-sm" onClick={() => window.location.reload()}>어트랙션 목록 새로고침</button>;
+    default:
+      return null;
+  }
 }

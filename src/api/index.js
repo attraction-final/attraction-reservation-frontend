@@ -475,58 +475,71 @@ export const paymentApi = {
 };
 
 // ───────── 루트 추천 ✅ ─────────
+// 명세: docs/api/route-recommendations.md (백엔드 KAN-167 브랜치)
+//  - 추천: 현재 위치 + 입장권 + 어트랙션 1~5개 → 서버가 "지금 ~ 22:00" 사이 슬롯까지 골라 방문 순서를 정해요.
+//  - 추천은 예약을 만들지 않아요. 결과 화면에서 "일괄 예약"을 눌러야 예약이 생겨요.
 
-// 이용할 수 없어 계산에서 뺀 구간의 이유
-const UNAVAILABLE_REASON = {
-  INACTIVE: '일시 폐쇄',
-  MISSING: '이동 정보 없음',
-};
+// 백엔드 규칙: 어트랙션은 1개 이상 5개 이하
+export const ROUTE_MIN_PICK = 1;
+export const ROUTE_MAX_PICK = 5;
 
-// [추천 결과] CreateRouteRecommendationResponse → 화면 모양
-// legs[i] 는 visits[i] 로 가는 구간이에요. (legs[0] = 현재 위치 → 첫 방문지)
-function toRouteResult(res, byId) {
-  const nameOf = (id) => byId.get(id)?.name ?? `어트랙션 ${id}`;
-  const visits = res.visits
-      .map((v, i) => {
+// 추천 종료 시각은 서버가 "방문일 22:00(폐장)"으로 정해요. 화면 안내 문구에만 써요.
+export const ROUTE_CLOSE_TIME = '22:00';
+
+// [추천 결과] 응답 data = { recommendation, location } → 화면 모양
+// 응답에 사진·구역이 없어서 어트랙션 목록(byId)에서 id로 찾아 붙여요.
+function toRouteResult(recommendation, location, byId) {
+  const r = recommendation;
+  const visits = [...(r.visits ?? [])]
+      .sort((x, y) => x.sequence - y.sequence)
+      .map((v) => {
         const a = byId.get(v.attractionId);
-        const leg = res.legs[i];
         return {
-          order: v.sequence,                       // 방문 순서 1, 2, 3...
+          order: v.sequence,                          // 방문 순서 1, 2, 3...
           attractionId: v.attractionId,
           name: v.attractionName,
           image: a?.image ?? imageOf(v.attractionName),
           zone: a?.zone ?? '',
-          moveMinutes: leg.moveMinutes,            // 이전 장소(처음엔 현재 위치)에서 여기까지 도보 시간
-          distanceM: leg.distanceM,                // 도보 거리(m)
-          estimated: leg.estimated,                // true 면 실측이 아닌 추정값 (첫 구간은 항상 추정)
-          fromUserLocation: leg.fromType === 'USER_LOCATION',
+          slotId: v.attractionSlotId,                 // 추천에 쓰인 슬롯 (화면 표시용, 예약 요청에는 안 써요)
+          moveMinutes: v.estimatedMoveMinutes,        // 이전 장소(처음엔 현재 위치)에서 여기까지 "예상" 이동 시간
+          moveEstimated: v.moveEstimated,             // true 면 좌표로 추정한 값 (첫 구간은 항상 true)
+          arrivalTime: toHHmm(v.estimatedArrivalAt),  // 도착 예정 시각
+          waitMinutes: v.estimatedWaitMinutes,        // 도착 후 탑승까지 예상 대기
+          rideStart: toHHmm(v.startsAt),              // 탑승 슬롯 시작
+          rideEnd: toHHmm(v.endsAt),                  // 탑승 슬롯 끝
+          rideMinutes: v.estimatedRideMinutes,
         };
-      })
-      .sort((x, y) => x.order - y.order);
+      });
 
   return {
+    recommendationId: r.recommendationId,          // 일괄 예약에 써요. NONE 이면 null
+    resultType: r.resultType,                      // FULL | PARTIAL | NONE
+    startTime: toHHmm(r.startAt),                  // 이용 시작(지금, 분 단위 올림)
+    endTime: toHHmm(r.endAt),                      // 이용 종료(22:00)
+    selectedCount: r.totalSelectedAttractions,
+    recommendedCount: r.totalRecommendedAttractions,
+    totalMoveMinutes: r.totalMoveMinutes,
+    totalWaitMinutes: r.totalWaitMinutes,
+    totalRideMinutes: r.totalRideMinutes,
+    totalDurationMinutes: r.totalDurationMinutes,
+    estimatedEndTime: toHHmm(r.estimatedEndAt),    // NONE 이면 null
     visits,
-    totalMoveMinutes: res.totalMoveMinutes,
-    totalDistanceM: res.totalDistanceM,
-    accuracyM: Math.round(res.location.accuracy),        // 위치 오차 반경(m)
-    stalePosition: res.location.warnings.includes('STALE_POSITION'), // 오래된 위치로 계산했는지
-    unavailablePaths: res.unavailablePaths.map((p) => ({
-      from: nameOf(p.fromAttractionId),
-      to: nameOf(p.toAttractionId),
-      reason: UNAVAILABLE_REASON[p.reason] ?? p.reason,
+    // 추천에서 빠진 어트랙션. 서버가 만든 이유 문장(reason)을 그대로 보여 줘요.
+    excluded: (r.excludedAttractions ?? []).map((e) => ({
+      attractionId: e.attractionId,
+      name: e.attractionName,
+      reasonCode: e.reasonCode,
+      reason: e.reason,
     })),
+    accuracyM: Math.round(location?.accuracy ?? 0),                            // 위치 오차 반경(m)
+    stalePosition: (location?.warnings ?? []).includes('STALE_POSITION'),     // 오래된 위치로 계산했는지
   };
 }
-
-// 백엔드 규칙: 어트랙션은 정확히 5개 (CreateRouteRecommendationRequest @Size(min = 5, max = 5))
-export const ROUTE_PICK_COUNT = 5;
 
 export const routeApi = {
   // [GET /api/route-recommendations/attractions] → [{ attractionId, attractionName, latitude, longitude }]
   // 추천에 고를 수 있는 어트랙션(운영 중이고 좌표가 등록된 곳)과 사진이 있는 어트랙션 목록을 합쳐서 줘요.
-  // 운영하지 않거나 좌표가 없는 어트랙션을 고르면 추천이 실패해서, 처음부터 선택지에서 빼요.
-  // 어트랙션 사이 이동 정보는 여기서 보장하지 않아요. 없으면 추천 요청이 409로 실패해요.
-  // 좌표(lat, lng)는 지도에 핀을 찍을 때 써요. 백엔드가 아직 좌표를 안 주면 null 이고, 그 어트랙션은 지도에만 안 보여요.
+  // 좌표가 없는 어트랙션을 고르면 LOCATION_NOT_FOUND 로 제외되니까, 처음부터 선택지에서 빼요.
   recommendableAttractions: async () => {
     const [recommendable, all] = await Promise.all([
       http.get('/route-recommendations/attractions'),
@@ -541,19 +554,51 @@ export const routeApi = {
         .map((a) => ({ ...a, ...locationById.get(a.id) }));
   },
 
-  // [POST /api/route-recommendations] { latitude, longitude, accuracy, ..., attractionIds }
-  // 현재 위치(getCurrentLocation 결과)와 어트랙션 5개로 총 이동 시간이 가장 짧은 방문 순서를 받아요.
-  // 서버는 결과를 저장하지 않아요. 슬롯·예약과는 상관없이 이동 순서만 계산해요.
-  recommend: async ({ position, attractionIds }) => {
-    if (attractionIds.length !== ROUTE_PICK_COUNT) {
-      throw new Error(`어트랙션을 정확히 ${ROUTE_PICK_COUNT}개 골라 주세요.`);
+  // 루트 추천에 쓸 수 있는 입장권: "입장 처리됨(IN_USE)" + "방문일이 오늘"
+  // 서버도 같은 조건을 검사해요. (UNUSED 를 보내면 409, 날짜가 다르면 400)
+  todayTickets: async () => {
+    const today = todayString();
+    const list = await ticketApi.mine('USABLE');
+    return list.filter((t) => t.status === 'IN_USE' && t.date === today);
+  },
+
+  // [POST /api/route-recommendations]
+  // { ticketId, attractionIds, latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed, timestamp }
+  //  - startAt / endAt 은 더 이상 보내지 않아요. (시작 = 지금, 종료 = 22:00 을 서버가 정해요)
+  //  - 결과가 FULL/PARTIAL 이면 201, 경로가 없으면(NONE) 200 이에요. 둘 다 "성공"이라 catch 로 오지 않아요.
+  recommend: async ({ ticketId, position, attractionIds }) => {
+    if (attractionIds.length < ROUTE_MIN_PICK || attractionIds.length > ROUTE_MAX_PICK) {
+      throw new Error(`어트랙션은 ${ROUTE_MIN_PICK}~${ROUTE_MAX_PICK}개 골라 주세요.`);
     }
-    const [res, all] = await Promise.all([
-      http.post('/route-recommendations', { ...position, attractionIds: attractionIds.map(Number) }),
+    if (new Set(attractionIds).size !== attractionIds.length) {
+      throw new Error('같은 어트랙션을 두 번 고를 수 없어요.');
+    }
+    const [data, all] = await Promise.all([
+      http.post('/route-recommendations', {
+        ticketId: Number(ticketId),
+        attractionIds: attractionIds.map(Number),
+        ...position, // latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed, timestamp
+      }),
       attractionApi.list('ALL'),
     ]);
-    // 응답에 사진·구역이 없어서 어트랙션 목록에서 id로 찾아 붙여요.
-    return toRouteResult(res, new Map(all.map((a) => [a.id, a])));
+    // 응답이 한 번 감싸졌어요: data.recommendation(추천 결과) + data.location(보낸 위치 + 경고)
+    return toRouteResult(data.recommendation, data.location, new Map(all.map((a) => [a.id, a])));
+  },
+
+  // [POST /api/route-recommendations/{recommendationId}/reservations] (요청 본문 없음)
+  // 추천에 들어 있는 방문을 "한 번에" 예약해요. 전부 성공하거나, 하나라도 실패하면 전부 취소(409)돼요.
+  reserveAll: async (recommendationId) => {
+    const r = await http.post(`/route-recommendations/${toId(recommendationId)}/reservations`);
+    return {
+      count: r.reservedCount,
+      reservations: (r.reservations ?? []).map((x) => ({
+        order: x.sequence,
+        name: x.attractionName,
+        number: x.reservationNumber,   // 사람이 보는 예약번호
+        reservationId: x.reservationId,
+        startTime: toHHmm(x.startsAt), // 실제로 예약된 슬롯 시각
+      })),
+    };
   },
 };
 

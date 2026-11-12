@@ -11,38 +11,38 @@
 // - HTTPS 또는 localhost 에서만 동작해요. (그 밖에서는 브라우저가 위치를 주지 않아요)
 
 const OPTIONS = {
-  enableHighAccuracy: true, // 공원 안 어트랙션 사이 거리는 수백 m라서 정확한 위치가 필요해요
-  timeout: 10000,           // 10초 안에 못 받으면 포기해요
-  maximumAge: 60000,        // 1분 안에 받은 위치는 다시 써요 (걸어서 약 50m 차이)
+    enableHighAccuracy: true, // 공원 안 어트랙션 사이 거리는 수백 m라서 정확한 위치가 필요해요
+    timeout: 10000,           // 10초 안에 못 받으면 포기해요
+    maximumAge: 0,            // 매번 새로 측정해요. (서버는 5분보다 오래된 위치면 STALE_POSITION 경고를 붙여요)
 };
 
 // GeolocationPositionError.code → 안내 문구
 const MESSAGES = {
-  1: '위치 권한이 거부되어 현재 위치를 알 수 없어요. 브라우저 설정에서 이 사이트의 위치 권한을 허용한 뒤 다시 시도해 주세요.',
-  2: '현재 위치를 확인할 수 없어요. 실내라면 밖으로 나가 잠시 후 다시 시도해 주세요.',
-  3: '현재 위치를 받는 데 시간이 너무 오래 걸려요. 잠시 후 다시 시도해 주세요.',
+    1: '위치 권한이 거부되어 현재 위치를 알 수 없어요. 브라우저 설정에서 이 사이트의 위치 권한을 허용한 뒤 다시 시도해 주세요.',
+    2: '현재 위치를 확인할 수 없어요. 실내라면 밖으로 나가 잠시 후 다시 시도해 주세요.',
+    3: '현재 위치를 받는 데 시간이 너무 오래 걸려요. 잠시 후 다시 시도해 주세요.',
 };
 
 export function getCurrentLocation() {
-  return new Promise((resolve, reject) => {
-    if (!('geolocation' in navigator)) {
-      reject(new Error('이 브라우저는 현재 위치 기능을 지원하지 않아요. 다른 브라우저에서 시도해 주세요.'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords, timestamp }) => resolve({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        accuracy: coords.accuracy,
-        altitude: coords.altitude,
-        altitudeAccuracy: coords.altitudeAccuracy,
-        // 멈춰 있으면 브라우저가 NaN 을 줘요. JSON 에서는 null 이 되지만 명시적으로 바꿔 둬요.
-        heading: Number.isNaN(coords.heading) ? null : coords.heading,
-        speed: coords.speed,
-        timestamp: Math.round(timestamp), // 측정 시각(ms). 서버는 오래된 위치면 경고를 붙여요
-      }),
-      (error) => reject(new Error(MESSAGES[error.code] ?? MESSAGES[2])),
-      OPTIONS,
-    );
-  });
+    return new Promise((resolve, reject) => {
+        if (!('geolocation' in navigator)) {
+            reject(new Error('이 브라우저는 현재 위치 기능을 지원하지 않아요. 다른 브라우저에서 시도해 주세요.'));
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            ({ coords, timestamp }) => resolve({
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                accuracy: coords.accuracy,
+                altitude: coords.altitude,
+                altitudeAccuracy: coords.altitudeAccuracy,
+                // 멈춰 있으면 브라우저가 NaN 을 줘요. JSON 에서는 null 이 되지만 명시적으로 바꿔 둬요.
+                heading: Number.isNaN(coords.heading) ? null : coords.heading,
+                speed: coords.speed,
+                timestamp: Math.round(timestamp), // 측정 시각(ms). 서버는 오래된 위치면 경고를 붙여요
+            }),
+            (error) => reject(new Error(MESSAGES[error.code] ?? MESSAGES[2])),
+            OPTIONS,
+        );
+    });
 }
