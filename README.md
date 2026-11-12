@@ -153,7 +153,7 @@ flowchart LR
 | [백엔드 저장소](https://github.com/attraction-final/attraction-reservation) | Spring Boot API 서버 코드입니다. |
 | [API 명세서](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/docs/api.md) | 프론트엔드 코드가 실제로 부르는 API(src/api/index.js 기준 목록) 입니다. |
 | [ERD](https://github.com/attraction-final/attraction-reservation-frontend/blob/main/docs/images/erd.png) | 전체 테이블 구조입니다. |
-| [기획안](https://app.notion.com/p/teamsparta/3f82dc3ef51480478333f70f5f2dbd57) | 기획 배경, 문제 정의, 비즈니스 규칙입니다. |
+| [기획안](https://github.com/attraction-final/attraction-reservation/wiki) | 기획 배경, 문제 정의, 비즈니스 규칙입니다. |
 
 ---
 
