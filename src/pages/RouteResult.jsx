@@ -53,10 +53,17 @@ export default function RouteResult() {
         <span className="row gap-4 small" style={{ color: 'var(--blue-ink)', flexShrink: 0 }}>
           <Icon name="clock" size={14} strokeWidth={2} />
           <span className="bold">{r.startTime} ~ {r.endTime} 기준 추천</span>
-          <span className="muted">· 위치 오차 약 {r.accuracyM}m</span>
+          {/* 정문 기준이면 내 위치를 계산에 안 썼으니 오차도 보여 주지 않아요 */}
+          {r.fromMainEntrance
+            ? <span className="muted">· 정문 출발 기준</span>
+            : <span className="muted">· 위치 오차 약 {r.accuracyM}m</span>}
         </span>
 
-        {r.stalePosition && (
+        {r.fromMainEntrance && (
+          <Notice>지금 위치가 공원에서 멀어서 정문에서 출발한다고 보고 계산했어요. 공원에 도착한 뒤 다시 추천받으면 더 정확해요.</Notice>
+        )}
+
+        {!r.fromMainEntrance && r.stalePosition && (
           <Notice>오래전에 확인한 위치로 계산했어요. 지금 위치와 다르면 다시 추천받아 주세요.</Notice>
         )}
 
@@ -75,7 +82,8 @@ export default function RouteResult() {
 
             <ol style={{ listStyle: 'none', margin: 0, padding: 0 }} className="stack">
               {r.visits.map((v, i) => (
-                <VisitItem key={v.attractionId} v={v} first={i === 0} last={i === r.visits.length - 1} />
+                <VisitItem key={v.attractionId} v={v} first={i === 0} last={i === r.visits.length - 1}
+                           startLabel={r.fromMainEntrance ? '정문에서 ' : '현재 위치에서 '} />
               ))}
             </ol>
           </>
@@ -108,8 +116,11 @@ export default function RouteResult() {
         {canReserve && (
           <button type="button" className="btn btn-pink" onClick={reserveAll} disabled={reserving}>
             <Icon name="check" size={20} strokeWidth={2.4} />
-            {reserving ? '예약 중…' : `${r.recommendedCount}곳 한 번에 예약하기`}
+            {reserving ? '예약 중…' : `${r.recommendedCount}곳 모두 예약`}
           </button>
+        )}
+        {canReserve && (
+          <span className="small muted" style={{ textAlign: 'center' }}>하나라도 실패하면 전부 취소됩니다.</span>
         )}
         <Link to="/route" className="btn btn-outline">다시 추천받기</Link>
       </div>
@@ -118,13 +129,13 @@ export default function RouteResult() {
 }
 
 // 방문 한 곳: [이동] → [어트랙션 카드] → [도착·대기·탑승 시각]
-function VisitItem({ v, first, last }) {
+function VisitItem({ v, first, last, startLabel }) {
   return (
     <li className="stack" style={{ gap: 8, paddingBottom: last ? 0 : 8 }}>
-      {/* 이전 장소(처음엔 현재 위치)에서 이 방문지까지의 이동 */}
+      {/* 이전 장소(처음엔 현재 위치 또는 정문)에서 이 방문지까지의 이동 */}
       <span className="row gap-4 small muted" style={{ paddingLeft: 44 }}>
         <Icon name="walk" size={14} strokeWidth={2} />
-        {first ? '현재 위치에서 ' : ''}예상 이동 {v.moveMinutes}분{v.moveEstimated && ' (추정)'}
+        {first ? startLabel : ''}예상 이동 {v.moveMinutes}분{v.moveEstimated && ' (추정)'}
       </span>
       <div className="row gap-12" style={{ alignItems: 'center' }}>
         <span className="display icon-circle" style={{ width: 32, height: 32, flexShrink: 0, background: 'var(--pink)', color: '#fff', fontSize: 17 }}>{v.order}</span>
@@ -133,7 +144,7 @@ function VisitItem({ v, first, last }) {
           <span className="stack grow" style={{ gap: 2 }}>
             <span className="bold" style={{ fontSize: 15 }}>{v.name}</span>
             <span className="small" style={{ color: 'var(--blue-ink)' }}>탑승 {v.rideStart} ~ {v.rideEnd}</span>
-            <span className="small muted">도착 예정 {v.arrivalTime} · 예상 대기 {v.waitMinutes}분</span>
+            <span className="small muted">예상 도착 {v.arrivalTime} · 예상 대기 {v.waitMinutes}분</span>
           </span>
           <Icon name="chevron" size={18} strokeWidth={2} />
         </Link>

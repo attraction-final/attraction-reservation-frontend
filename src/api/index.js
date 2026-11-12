@@ -486,9 +486,10 @@ export const ROUTE_MAX_PICK = 5;
 // 추천 종료 시각은 서버가 "방문일 22:00(폐장)"으로 정해요. 화면 안내 문구에만 써요.
 export const ROUTE_CLOSE_TIME = '22:00';
 
-// [추천 결과] 응답 data = { recommendation, location } → 화면 모양
+// [추천 결과] 응답 data = { recommendation, location, startPoint } → 화면 모양
 // 응답에 사진·구역이 없어서 어트랙션 목록(byId)에서 id로 찾아 붙여요.
-function toRouteResult(recommendation, location, byId) {
+// startPoint: 'CURRENT_LOCATION'(현재 위치 기준) | 'MAIN_ENTRANCE'(공원에서 멀어서 정문 기준)
+function toRouteResult(recommendation, location, byId, startPoint) {
   const r = recommendation;
   const visits = [...(r.visits ?? [])]
       .sort((x, y) => x.sequence - y.sequence)
@@ -533,6 +534,7 @@ function toRouteResult(recommendation, location, byId) {
     })),
     accuracyM: Math.round(location?.accuracy ?? 0),                            // 위치 오차 반경(m)
     stalePosition: (location?.warnings ?? []).includes('STALE_POSITION'),     // 오래된 위치로 계산했는지
+    fromMainEntrance: startPoint === 'MAIN_ENTRANCE',                         // 공원에서 멀어서 정문 기준으로 계산했는지
   };
 }
 
@@ -581,8 +583,8 @@ export const routeApi = {
       }),
       attractionApi.list('ALL'),
     ]);
-    // 응답이 한 번 감싸졌어요: data.recommendation(추천 결과) + data.location(보낸 위치 + 경고)
-    return toRouteResult(data.recommendation, data.location, new Map(all.map((a) => [a.id, a])));
+    // 응답이 한 번 감싸졌어요: data.recommendation(추천 결과) + data.location(보낸 위치 + 경고) + data.startPoint(출발 기준)
+    return toRouteResult(data.recommendation, data.location, new Map(all.map((a) => [a.id, a])), data.startPoint);
   },
 
   // [POST /api/route-recommendations/{recommendationId}/reservations] (요청 본문 없음)

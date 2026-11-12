@@ -30,6 +30,10 @@ import { useAuth } from '../context/AuthContext.jsx';
 // 아래 미리보기 시트가 지도를 가리는 높이의 절반쯤(px). 고른 핀이 시트 위에 보이게 지도를 이만큼 올려요.
 const SHEET_OFFSET_PX = 80;
 
+// 서버는 위치 오차가 이 값(m) 이상이면 추천을 거절해요. (백엔드 RouteRecommendationProperties.accuracyLimitMeters 기본값 100)
+// ⚠️ 서버 설정값을 바꾸면 여기도 같이 바꿔야 해요.
+const ACCURACY_LIMIT_M = 100;
+
 // 지도 고르기: 카카오 키가 있으면 카카오맵, 없으면 백엔드 좌표만으로 그리는 간이 지도(임시)를 써요.
 // 두 부품은 props 가 같아서 이 한 줄로 바꿔 끼울 수 있어요.
 const USE_KAKAO = Boolean(KAKAO_MAP_APP_KEY);
@@ -90,12 +94,14 @@ export default function RouteSetup() {
 
         <TicketBox tickets={tickets} ticketId={ticketId} onChange={setTicketId} />
 
+        <LocationBox geo={geo} />
+
         <ViewTabs view={view} onMap={() => setView('map')} onList={showList} />
 
         <div className="stack gap-8" style={{ flexShrink: 0 }}>
           <div className="row between" style={{ alignItems: 'baseline' }}>
             <h2 className="display" style={{ fontSize: 18 }}>방문할 어트랙션</h2>
-            <span className="small bold" style={{ color: 'var(--blue-ink)' }}>{picked.length}/{ROUTE_MAX_PICK}개 선택됨 ({ROUTE_MIN_PICK}~{ROUTE_MAX_PICK}개)</span>
+            <span className="small bold" style={{ color: 'var(--blue-ink)' }}>{picked.length}/{ROUTE_MAX_PICK}개 선택 · 최대 {ROUTE_MAX_PICK}개</span>
           </div>
           {rides.error && <span className="error-text" role="alert">{rides.error.message}</span>}
           {!rides.error && list.length === 0 && (
@@ -261,7 +267,53 @@ function geoMessage(status) {
   }
 }
 
+// "현재 위치" 영역의 상태 글자
+function locationStatusText(status, position) {
+  if (status === GEO_STATUS.REQUESTING) return '측정 중…';
+  if (status === GEO_STATUS.TRACKING && position) return '측정 완료';
+  if (status === GEO_STATUS.DENIED) return '권한 꺼짐';
+  if (status === GEO_STATUS.TIMEOUT) return '시간 초과';
+  if (status === GEO_STATUS.UNAVAILABLE) return '측정 실패';
+  return '측정 전';
+}
+
 // ───────── 화면 조각 ─────────
+
+// 현재 위치 영역: 측정 상태 · 정확도(오차 반경) · 다시 측정 버튼
+// 여기 보이는 값은 "미리 보기"예요. 실제 추천 요청 때는 버튼을 누른 순간 위치를 한 번 더 새로 재서 보내요.
+function LocationBox({ geo }) {
+  const { status, position, start } = geo;
+  const measuring = status === GEO_STATUS.REQUESTING;
+  const accuracyM = position ? Math.round(position.accuracy) : null;
+  const tooInaccurate = accuracyM != null && accuracyM >= ACCURACY_LIMIT_M;
+  const problem = geoMessage(status); // 권한 꺼짐·시간 초과·실패일 때만 문장이 있어요
+
+  return (
+    <section className="card stack gap-8" aria-labelledby="route-location-title"
+      style={{ borderRadius: 18, padding: '12px 14px', flexShrink: 0 }}>
+      <div className="row between" style={{ alignItems: 'center' }}>
+        <h2 id="route-location-title" className="row gap-4 small bold" style={{ margin: 0 }}>
+          <Icon name="locate" size={16} strokeWidth={2.2} />현재 위치
+        </h2>
+        <button type="button" className="btn btn-outline btn-sm" onClick={start} disabled={measuring}>
+          {position ? '다시 측정' : '위치 측정'}
+        </button>
+      </div>
+      {/* <output>: 상태가 바뀌면 스크린리더가 읽어 줘요 */}
+      <output className="small" style={{ color: 'var(--blue-ink)' }}>
+        <span className="bold">{locationStatusText(status, position)}</span>
+        {accuracyM != null && <span> · 정확도 약 ±{accuracyM}m</span>}
+      </output>
+      {tooInaccurate && (
+        <span className="small" style={{ color: 'var(--orange-ink)' }}>
+          오차가 {ACCURACY_LIMIT_M}m 이상이면 추천을 받을 수 없어요. 건물 밖이나 하늘이 트인 곳에서 다시 측정해 주세요.
+        </span>
+      )}
+      {problem && <span className="small muted">{problem}</span>}
+      <span className="small muted">루트 추천받기를 누를 때 위치를 한 번 더 새로 측정해서 보내요.</span>
+    </section>
+  );
+}
 
 function ViewTabs({ view, onMap, onList }) {
   return (
@@ -422,22 +474,26 @@ function TicketBox({ tickets, ticketId, onChange }) {
       </div>
     );
   }
-  if (list.length === 1) {
-    return (
-      <span className="row gap-4 small" style={{ color: 'var(--blue-ink)', flexShrink: 0 }}>
-        <Icon name="ticket" size={14} strokeWidth={2} />
-        <span className="bold">{list[0].name}</span>
-        <span className="muted">· 오늘 입장 완료</span>
-      </span>
-    );
-  }
   return (
-    <div className="stack gap-4" style={{ flexShrink: 0 }}>
-      <label htmlFor="route-ticket" className="small bold">사용할 입장권</label>
-      <select id="route-ticket" className="input" value={ticketId} onChange={(e) => onChange(Number(e.target.value))} style={{ fontSize: 14 }}>
-        {list.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.code})</option>)}
-      </select>
-    </div>
+    <section className="card stack gap-8" aria-labelledby="route-ticket-title"
+      style={{ borderRadius: 18, padding: '12px 14px', flexShrink: 0 }}>
+      <h2 id="route-ticket-title" className="row gap-4 small bold" style={{ margin: 0 }}>
+        <Icon name="ticket" size={16} strokeWidth={2} />적용 입장권
+      </h2>
+      {list.length === 1 ? (
+        <span className="small" style={{ color: 'var(--blue-ink)' }}>
+          <span className="bold">{list[0].name}</span> <span className="muted">({list[0].code}) · 오늘 입장 완료</span>
+        </span>
+      ) : (
+        <>
+          <label htmlFor="route-ticket" className="sr-only">사용할 입장권</label>
+          <select id="route-ticket" className="input" value={ticketId} onChange={(e) => onChange(Number(e.target.value))} style={{ fontSize: 14 }}>
+            {list.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.code})</option>)}
+          </select>
+        </>
+      )}
+      <span className="small muted">입장 처리된 오늘 입장권만 사용할 수 있어요.</span>
+    </section>
   );
 }
 
