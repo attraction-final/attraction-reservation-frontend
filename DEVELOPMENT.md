@@ -195,9 +195,12 @@ attraction-reservation-frontend/
 ```
 /route 화면
   → GET /api/route-recommendations/attractions   (고를 수 있는 어트랙션 + 좌표)
-  → 지도(핀) 또는 목록에서 정확히 5개 고르기
+  → 입장 처리된(IN_USE) 오늘 입장권 확인 (GET /api/tickets/me)
+  → 지도(핀) 또는 목록에서 1~5개 고르기
   → [루트 추천받기] → 브라우저 위치 받기 → POST /api/route-recommendations
-  → /route/result 화면
+  → /route/result 화면 (FULL·PARTIAL 이면 예약 버튼, NONE 이면 제외 사유만)
+  → [한 번에 예약하기] → POST /api/route-recommendations/{recommendationId}/reservations
+  → /my/reservations
 ```
 - **지도는 두 가지입니다.** 카카오맵 키가 있으면 `AttractionMap`(카카오맵), 없으면 `SimpleAttractionMap`(백엔드 좌표만으로 그린 간이 지도)이 표시됩니다. 바꾸는 곳은 `RouteSetup.jsx` 의 `MapView` 한 줄입니다.
 - **핀을 누르는 건 미리보기**이고, 미리보기 카드의 "루트에 넣기" 버튼을 눌러야 골라집니다. (지도는 실수로 누르기 쉬워서 나눴습니다)

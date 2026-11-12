@@ -54,7 +54,8 @@
 | 메서드 | 주소 | 설명 |
 |---|---|---|
 | GET | `/api/route-recommendations/attractions` | 추천에 고를 수 있는 어트랙션과 좌표를 조회합니다. |
-| POST | `/api/route-recommendations` | 현재 위치와 어트랙션 5개로 방문 순서를 추천받습니다. |
+| POST | `/api/route-recommendations` | 오늘 입장권·현재 위치·어트랙션 1~5개로 지금부터 22:00까지의 방문 순서와 슬롯을 추천받습니다. (예약은 만들지 않음) |
+| POST | `/api/route-recommendations/{recommendationId}/reservations` | 추천 경로의 방문을 한 번에 예약합니다. 하나라도 실패하면 전부 취소됩니다. |
 
 ## 입장권 · 주문 · 결제
 
