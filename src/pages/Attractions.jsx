@@ -118,7 +118,7 @@ export default function Attractions() {
             ))}
           </div>
           {height != null && (
-            <span className="small muted">키 {height}cm로 탈 수 있는 어트랙션만 보여요. 키 정보가 없는 어트랙션은 빠져요.</span>
+            <span className="small muted">키 {height}cm로 혼자 탈 수 있는 어트랙션만 보여요. 키 정보가 없는 어트랙션은 빠져요.</span>
           )}
         </div>
 
